@@ -40,11 +40,13 @@ func initCursor() *cursor {
 		TrailDensity:                0.5,
 		TrailMaxLength:              2000,
 		TrailRemoveSpeed:            1,
+		SmokeRemoveSpeed:            1,
 		GlowEndScale:                0.4,
 		InnerLengthMult:             0.9,
 		AdditiveBlending:            true,
 		CursorRipples:               true,
 		SmokeEnabled:                true,
+		KnockoutSmokeEnabled:        true,
 	}
 }
 
@@ -69,11 +71,13 @@ type cursor struct {
 	TrailDensity                float64 //0.5 - 1/TrailDensity = distance between trail points
 	TrailMaxLength              int64   //2000 - maximum width (in osu!pixels) of cursortrail
 	TrailRemoveSpeed            float64 //1.0 - trail removal multiplier, 0.5 means half the speed
+	SmokeRemoveSpeed            float64
 	GlowEndScale                float64 //0.4
 	InnerLengthMult             float64 //0.9 - if glow is enabled, inner trail will be shortened to 0.9 * length
 	AdditiveBlending            bool
 	CursorRipples               bool
 	SmokeEnabled                bool
+	KnockoutSmokeEnabled        bool
 }
 
 func (cr *cursor) GetColors(divides, cursors int, beatScale, alpha float64) []color2.Color {

@@ -7,7 +7,7 @@ settings.json
 settings-*
 danser.db
 danser
-danser*.exe
+*.exe
 danser*.zip
 danser.log
 assets.dpak
