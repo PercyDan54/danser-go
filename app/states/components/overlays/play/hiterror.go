@@ -51,7 +51,7 @@ func NewHitErrorMeter(width, height float64, diff *difficulty.Difficulty) *HitEr
 	meter.urText = "0UR"
 	meter.urGlider = animation.NewTargetGlider(0, 0)
 
-	sum := float64(meter.diff.Hit50) * 0.8
+	sum := float64(meter.diff.Hit50) * 0.8 / settings.SPEED
 
 	scale := settings.Gameplay.HitErrorMeter.Scale
 
@@ -62,7 +62,7 @@ func NewHitErrorMeter(width, height float64, diff *difficulty.Difficulty) *HitEr
 	bg.SetAlpha(0.6)
 	meter.errorDisplay.Add(bg)
 
-	vals := []float64{float64(meter.diff.Hit300) * 0.8, float64(meter.diff.Hit100) * 0.8, float64(meter.diff.Hit50) * 0.8}
+	vals := []float64{float64(meter.diff.Hit300) * 0.8 / settings.SPEED, float64(meter.diff.Hit100) * 0.8 / settings.SPEED, float64(meter.diff.Hit50) * 0.8 / settings.SPEED}
 
 	for i, v := range vals {
 		pos := 0.0
