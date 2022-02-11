@@ -11,6 +11,7 @@ import (
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/rplpa"
 	"sort"
+	"strconv"
 	"time"
 
 	//"github.com/thehowl/go-osuapi"
@@ -331,6 +332,8 @@ func (controller *ReplayController) InitCursors() {
 			cursor.Name = controller.replays[i].Name
 			cursor.ScoreID = controller.replays[i].scoreID
 			cursor.ScoreTime = controller.replays[i].ScoreTime
+			cursor.Tag = int64(i)
+			log.Println(cursor.Name + ": " + strconv.FormatInt(cursor.Tag, 10))
 			cursor.OldSpinnerScoring = controller.controllers[i].oldSpinners
 
 			c.replayTime += c.frames[0].Time

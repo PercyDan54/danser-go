@@ -329,10 +329,12 @@ func ParseObjects(beatMap *BeatMap) {
 	comboSet := 0
 	comboSetHax := 0
 	forceNewCombo := false
+	isSpinner := false
 
 	for _, iO := range beatMap.HitObjects {
 		if iO.GetType() == objects.SPINNER {
 			forceNewCombo = true
+			isSpinner = true
 		} else if iO.IsNewCombo() || forceNewCombo {
 			iO.SetNewCombo(true)
 			comboNumber = 1
@@ -346,6 +348,10 @@ func ParseObjects(beatMap *BeatMap) {
 		iO.SetComboNumber(int64(comboNumber))
 		iO.SetComboSet(int64(comboSet))
 		iO.SetComboSetHax(int64(comboSetHax))
+
+		if settings.TAG > 1 && settings.CursorDance.DoSpinnersTogether && isSpinner {
+			iO.SetID(int64(num) - 1)
+		}
 
 		comboNumber++
 		num++

@@ -84,6 +84,7 @@ type Cursor struct {
 
 	Name      string
 	ScoreID   int64
+	Tag       int64
 	ScoreTime time.Time
 
 	lastSetting bool
@@ -238,7 +239,7 @@ func (cursor *Cursor) smokeUpdate() {
 				smoke.SetAdditive(settings.PLAYERS == 1)
 				smoke.SetRotation(rand.Float64() * 2 * math.Pi)
 				smoke.SetScale(0.5 / scaling)
-				smoke.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, cursor.time, cursor.time+(4000 / settings.Cursor.SmokeRemoveSpeed), 0.6, 0.0))
+				smoke.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, cursor.time, cursor.time+(4000/settings.Cursor.SmokeRemoveSpeed), 0.6, 0.0))
 				smoke.ResetValuesToTransforms()
 				smoke.AdjustTimesToTransformations()
 				smoke.ShowForever(false)

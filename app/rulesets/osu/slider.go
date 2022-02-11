@@ -3,6 +3,7 @@ package osu
 import (
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/beatmap/objects"
+	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
 	"math"
@@ -94,6 +95,11 @@ func (slider *Slider) Init(ruleSet *OsuRuleSet, object objects.IHitObject, playe
 
 func (slider *Slider) UpdateClickFor(player *difficultyPlayer, time int64) bool {
 	state := slider.state[player]
+	if player.cursor.Tag != slider.GetNumber()%int64(settings.TAG) {
+		state.isHit = true
+		state.startResult = Ignore
+		return true
+	}
 
 	position := slider.hitSlider.GetStackedStartPositionMod(player.diff.Mods)
 
@@ -168,7 +174,9 @@ func (slider *Slider) UpdateClickFor(player *difficultyPlayer, time int64) bool 
 
 func (slider *Slider) UpdateFor(player *difficultyPlayer, time int64, processSliderEndsAhead bool) bool {
 	state := slider.state[player]
-
+	if player.cursor.Tag != slider.GetNumber()%int64(settings.TAG) {
+		return true
+	}
 	var sliderPosition vector.Vector2f
 
 	switch {
@@ -291,6 +299,11 @@ func (slider *Slider) UpdateFor(player *difficultyPlayer, time int64, processSli
 
 func (slider *Slider) UpdatePostFor(player *difficultyPlayer, time int64, processSliderEndsAhead bool) bool {
 	state := slider.state[player]
+	if player.cursor.Tag != slider.hitSlider.HitObjectID%int64(settings.TAG) {
+		state.isHit = true
+		state.startResult = Ignore
+		return true
+	}
 
 	if time > int64(slider.hitSlider.GetStartTime())+player.diff.Hit50 && !state.isStartHit {
 		if len(slider.players) == 1 {
