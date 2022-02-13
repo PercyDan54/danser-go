@@ -1020,7 +1020,7 @@ func (slider *Slider) drawBall(time float64, batch *batch.QuadBatch, color color
 		color := color2.NewL(1)
 
 		if skin.GetInfo().SliderBallTint {
-			color = skin.GetColor(int(slider.ComboSet), int(slider.ComboSetHax), color)
+			color = settings.Cursor.GetColors(settings.DIVIDES, settings.TAG, 1, 1)[slider.GetID()%int64(settings.TAG)]
 		} else if skin.GetInfo().SliderBall != nil {
 			color = *skin.GetInfo().SliderBall
 		}

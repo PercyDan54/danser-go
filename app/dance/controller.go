@@ -32,9 +32,9 @@ func (controller *GenericController) SetBeatMap(beatMap *beatmap.BeatMap) {
 	controller.bMap = beatMap
 }
 
-func (controller *GenericController) InitCursors() {
-	controller.cursors = make([]*graphics.Cursor, settings.TAG)
-	controller.schedulers = make([]schedulers.Scheduler, settings.TAG)
+func (controller *GenericController) InitCursor(tag int) {
+	controller.cursors = make([]*graphics.Cursor, 1)
+	controller.schedulers = make([]schedulers.Scheduler, 1)
 
 	counter := make(map[string]int)
 
@@ -44,7 +44,7 @@ func (controller *GenericController) InitCursors() {
 
 		mover := "flower"
 		if len(settings.CursorDance.Movers) > 0 {
-			mover = strings.ToLower(settings.CursorDance.Movers[i%len(settings.CursorDance.Movers)].Mover)
+			mover = strings.ToLower(settings.CursorDance.Movers[tag%len(settings.CursorDance.Movers)].Mover)
 		}
 
 		var moverCtor func() movers.MultiPointMover
@@ -73,7 +73,7 @@ func (controller *GenericController) InitCursors() {
 			mover = "flower"
 		}
 
-		controller.schedulers[i] = schedulers.NewGenericScheduler(moverCtor, i, counter[mover])
+		controller.schedulers[i] = schedulers.NewGenericScheduler(moverCtor, tag, tag)
 
 		counter[mover]++
 	}
@@ -94,7 +94,7 @@ func (controller *GenericController) InitCursors() {
 	}
 
 	// Convert sliders to pseudo-circles for tag cursors
-	if !settings.CursorDance.ComboTag && !settings.CursorDance.Battle && settings.CursorDance.TAGSliderDance && settings.TAG > 1 {
+	if !settings.CursorDance.ComboTag && !settings.CursorDance.Battle && settings.CursorDance.TAGSliderDance && tag > 1 {
 		for i := 0; i < len(queue); i++ {
 			queue = schedulers.PreprocessQueue(i, queue, true)
 		}
@@ -137,8 +137,11 @@ func (controller *GenericController) InitCursors() {
 			spinMover = settings.CursorDance.Spinners[i%len(settings.CursorDance.Spinners)].Mover
 		}
 
-		controller.schedulers[i].Init(queues[i].hitObjects, controller.bMap.Diff, controller.cursors[i], spinners.GetMoverCtorByName(spinMover), true)
+		controller.schedulers[i].Init(queues[tag].hitObjects, controller.bMap.Diff, controller.cursors[i], spinners.GetMoverCtorByName(spinMover), true)
 	}
+}
+func (controller *GenericController) InitCursors() {
+	controller.InitCursor(1)
 }
 
 func (controller *GenericController) Update(time float64, delta float64) {

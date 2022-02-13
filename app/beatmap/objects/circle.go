@@ -284,7 +284,7 @@ func (circle *Circle) Draw(time float64, color color2.Color, batch *batch.QuadBa
 
 	batch.SetColor(1, 1, 1, alpha)
 
-	circle.hitCircle.SetColor(skin.GetColor(int(circle.ComboSet), int(circle.ComboSetHax), color))
+	circle.hitCircle.SetColor(settings.Cursor.GetColors(settings.DIVIDES, settings.TAG, 1, 1)[circle.GetID()%int64(settings.TAG)])
 
 	circle.hitCircle.Draw(time, batch)
 
@@ -331,7 +331,7 @@ func (circle *Circle) DrawApproach(time float64, color color2.Color, batch *batc
 	batch.SetTranslation(position.Copy64())
 	batch.SetColor(1, 1, 1, float64(color.A))
 
-	circle.approachCircle.SetColor(skin.GetColor(int(circle.ComboSet), int(circle.ComboSetHax), color))
+	circle.approachCircle.SetColor(settings.Cursor.GetColors(settings.DIVIDES, settings.TAG, 1, 1)[circle.GetID()%int64(settings.TAG)])
 
 	circle.approachCircle.Draw(time, batch)
 }

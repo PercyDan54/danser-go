@@ -337,6 +337,7 @@ func ParseObjects(beatMap *BeatMap) {
 			isSpinner = true
 		} else if iO.IsNewCombo() || forceNewCombo {
 			iO.SetNewCombo(true)
+			isSpinner = false
 			comboNumber = 1
 			comboSet++
 			comboSetHax += int(iO.GetColorOffset()) + 1
@@ -350,7 +351,7 @@ func ParseObjects(beatMap *BeatMap) {
 		iO.SetComboSetHax(int64(comboSetHax))
 
 		if settings.TAG > 1 && settings.CursorDance.DoSpinnersTogether && isSpinner {
-			iO.SetID(int64(num) - 1)
+			iO.SetID(0)
 		}
 
 		comboNumber++

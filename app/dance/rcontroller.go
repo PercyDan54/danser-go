@@ -145,17 +145,19 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 	}
 
 	if !localReplay && (settings.Knockout.AddDanser || len(candidates) == 0) {
-		control := NewSubControl()
-		control.mods = difficulty.Autoplay | beatMap.Diff.Mods
+		for i := 0; i < settings.TAG; i++ {
+			control := NewSubControl()
+			control.mods = difficulty.Autoplay | beatMap.Diff.Mods
 
-		control.danceController = NewGenericController()
-		control.danceController.SetBeatMap(beatMap)
+			control.danceController = NewGenericController()
+			control.danceController.SetBeatMap(beatMap)
 
-		controller.replays = append([]RpData{{settings.Knockout.DanserName, control.mods.String(), control.mods, 100, 0, 0, osu.NONE, -1, time.Now()}}, controller.replays...)
-		controller.controllers = append([]*subControl{control}, controller.controllers...)
+			controller.replays = append([]RpData{{settings.Knockout.DanserName + strconv.Itoa(i) + string(rune(unicode.MaxRune-i)), control.mods.String(), control.mods, 100, 0, 0, osu.NONE, -1, time.Now()}}, controller.replays...)
+			controller.controllers = append([]*subControl{control}, controller.controllers...)
 
-		if len(candidates) == 0 {
-			controller.bMap.Diff.SetMods(controller.bMap.Diff.Mods | difficulty.Autoplay)
+			if len(candidates) == 0 {
+				controller.bMap.Diff.SetMods(controller.bMap.Diff.Mods | difficulty.Autoplay)
+			}
 		}
 	}
 
@@ -313,7 +315,7 @@ func (controller *ReplayController) InitCursors() {
 
 	for i, c := range controller.controllers {
 		if controller.controllers[i].danceController != nil {
-			controller.controllers[i].danceController.InitCursors()
+			controller.controllers[i].danceController.(*GenericController).InitCursor(i)
 
 			controller.controllers[i].danceController.GetCursors()[0].IsPlayer = true
 			controller.controllers[i].danceController.GetCursors()[0].IsAutoplay = true
@@ -324,6 +326,7 @@ func (controller *ReplayController) InitCursors() {
 				cursor.Name = controller.replays[i].Name
 				cursor.ScoreTime = time.Now()
 				cursor.ScoreID = -1
+				cursor.Tag = int64(i)
 			}
 
 			controller.cursors = append(controller.cursors, cursors...)
