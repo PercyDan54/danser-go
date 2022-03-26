@@ -51,7 +51,7 @@ func NewHitErrorMeter(width, height float64, diff *difficulty.Difficulty) *HitEr
 	meter.urText = "0UR"
 	meter.urGlider = animation.NewTargetGlider(0, 0)
 
-	sum := float64(meter.diff.Hit50) * 0.8
+	sum := float64(meter.diff.Hit50) * 0.8 / settings.SPEED
 
 	scale := settings.Gameplay.HitErrorMeter.Scale
 
@@ -62,7 +62,7 @@ func NewHitErrorMeter(width, height float64, diff *difficulty.Difficulty) *HitEr
 	bg.SetAlpha(0.6)
 	meter.errorDisplay.Add(bg)
 
-	vals := []float64{float64(meter.diff.Hit300) * 0.8, float64(meter.diff.Hit100) * 0.8, float64(meter.diff.Hit50) * 0.8}
+	vals := []float64{float64(meter.diff.Hit300) * 0.8 / settings.SPEED, float64(meter.diff.Hit100) * 0.8 / settings.SPEED, float64(meter.diff.Hit50) * 0.8 / settings.SPEED}
 
 	for i, v := range vals {
 		pos := 0.0
@@ -111,7 +111,7 @@ func (meter *HitErrorMeter) Add(time, error float64, positionalMiss bool) {
 
 	pixel := graphics.Pixel.GetRegion()
 
-	middle := sprite.NewSpriteSingle(&pixel, 3.0, vector.NewVec2d(meter.Width/2+error*0.8*scale, meter.Height-errorBase*2*scale), vector.Centre)
+	middle := sprite.NewSpriteSingle(&pixel, 3.0, vector.NewVec2d(meter.Width/2+error*0.8*scale / settings.SPEED, meter.Height-errorBase*2*scale), vector.Centre)
 	middle.SetScaleV(vector.NewVec2d(3, errorBase*4).Scl(scale))
 	middle.SetAdditive(true)
 

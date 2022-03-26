@@ -8,6 +8,7 @@ settings-*
 danser.db
 danser
 *.exe
+*.dll
 danser*.zip
 danser.log
 assets.dpak
