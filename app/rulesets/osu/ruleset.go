@@ -112,6 +112,7 @@ type subSet struct {
 	recoveries     int
 	scoreProcessor scoreProcessor
 	failed         bool
+	sdpfFail       bool
 }
 
 type MapTo struct {
@@ -152,8 +153,13 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, mods []
 	ruleset.oppDiffs = make(map[difficulty.Modifier][]performance.Attributes)
 
 	if settings.Gameplay.UseLazerPP {
-		log.Println("Using pp calc version 2021-11-09 with hotfix: https://osu.ppy.sh/home/news/2021-11-09-performance-points-star-rating-updates")
-		//ruleset.experimentalPP = true
+		log.Println("Using pp calc version 2022-01-23:")
+		log.Println("\tRemove decay factor in Flashlight skill: https://github.com/ppy/osu/pull/15728")
+		log.Println("\tMake speed skill consider only the shortest movement distance: https://github.com/ppy/osu/pull/15758")
+		log.Println("\tFix cumulative strain time calculation in Flashlight skill: https://github.com/ppy/osu/pull/15867")
+		log.Println("\tRemove combo scaling from Aim and Speed from osu! performance calculation: https://github.com/ppy/osu/pull/16280")
+		log.Println("\tDon't floor effectiveMissCount: https://github.com/ppy/osu/pull/16331")
+		ruleset.experimentalPP = true
 	} else {
 		log.Println("Using pp calc version 2021-11-09 with hotfix: https://osu.ppy.sh/home/news/2021-11-09-performance-points-star-rating-updates")
 	}
@@ -441,6 +447,13 @@ func (set *OsuRuleSet) SendResult(time int64, cursor *graphics.Cursor, src HitOb
 		return
 	}
 
+	if (subSet.player.diff.Mods.Active(difficulty.SuddenDeath|difficulty.Perfect) && comboResult == ComboResults.Reset) ||
+		(subSet.player.diff.Mods.Active(difficulty.Perfect) && (result&BaseHitsM > 0 && result&BaseHitsM != Hit300)) {
+		result = Miss
+		comboResult = ComboResults.Reset
+		subSet.sdpfFail = true
+	}
+
 	result = subSet.scoreProcessor.ModifyResult(result, src)
 	subSet.scoreProcessor.AddResult(result, comboResult)
 
@@ -450,7 +463,7 @@ func (set *OsuRuleSet) SendResult(time int64, cursor *graphics.Cursor, src HitOb
 		subSet.numObjects++
 	}
 
-	subSet.maxCombo = mutils.MaxI64(subSet.scoreProcessor.GetCombo(), subSet.maxCombo)
+	subSet.maxCombo = mutils.Max(subSet.scoreProcessor.GetCombo(), subSet.maxCombo)
 
 	if subSet.numObjects == 0 {
 		subSet.accuracy = 100
@@ -482,7 +495,7 @@ func (set *OsuRuleSet) SendResult(time int64, cursor *graphics.Cursor, src HitOb
 		subSet.grade = D
 	}
 
-	index := mutils.MaxI64(0, subSet.numObjects-1)
+	index := mutils.Max(0, subSet.numObjects-1)
 
 	diff := set.oppDiffs[subSet.player.diff.Mods&difficulty.DifficultyAdjustMask][index]
 
@@ -532,7 +545,11 @@ func (set *OsuRuleSet) SendResult(time int64, cursor *graphics.Cursor, src HitOb
 		subSet.currentKatu = 0
 	}
 
-	subSet.hp.AddResult(result)
+	if subSet.sdpfFail {
+		subSet.hp.Increase(-100000, true)
+	} else {
+		subSet.hp.AddResult(result)
+	}
 
 	if set.hitListener != nil {
 		set.hitListener(cursor, time, number, vector.NewVec2f(x, y).Copy64(), result, comboResult, subSet.ppv2.Results, subSet.scoreProcessor.GetScore())
@@ -606,7 +623,7 @@ func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 	}
 
 	// EZ mod gives 2 additional lives
-	if subSet.recoveries > 0 {
+	if subSet.recoveries > 0 && !subSet.sdpfFail {
 		subSet.hp.Increase(160, false)
 		subSet.recoveries--
 
@@ -619,6 +636,15 @@ func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 	}
 
 	subSet.failed = true
+}
+
+func (set *OsuRuleSet) PlayerStopped(cursor *graphics.Cursor, time int64) {
+	subSet := set.cursors[cursor]
+
+	if time < int64(set.beatMap.HitObjects[len(set.beatMap.HitObjects)-1].GetEndTime())+subSet.player.diff.Hit50+20 {
+		subSet.sdpfFail = true
+		subSet.hp.Increase(-10000, true)
+	}
 }
 
 func (set *OsuRuleSet) SetListener(listener hitListener) {
