@@ -457,10 +457,14 @@ func (set *OsuRuleSet) SendResult(time int64, cursor *graphics.Cursor, src HitOb
 	result = subSet.scoreProcessor.ModifyResult(result, src)
 	subSet.scoreProcessor.AddResult(result, comboResult)
 
-	if result&BaseHitsM > 0 {
+	sb := result == SliderMiss && comboResult == ComboResults.Reset
+	if result&BaseHitsM > 0 || sb {
 		subSet.rawScore += result.ScoreValue()
 		subSet.hits[result]++
-		subSet.numObjects++
+
+		if !sb {
+			subSet.numObjects++
+		}
 	}
 
 	subSet.maxCombo = mutils.Max(subSet.scoreProcessor.GetCombo(), subSet.maxCombo)
@@ -667,6 +671,11 @@ func (set *OsuRuleSet) GetResults(cursor *graphics.Cursor) (float64, int64, int6
 func (set *OsuRuleSet) GetHits(cursor *graphics.Cursor) (int64, int64, int64, int64, int64, int64) {
 	subSet := set.cursors[cursor]
 	return subSet.hits[Hit300], subSet.hits[Hit100], subSet.hits[Hit50], subSet.hits[Miss], subSet.gekiCount, subSet.katuCount
+}
+
+func (set *OsuRuleSet) GetSB(cursor *graphics.Cursor) int64 {
+	subSet := set.cursors[cursor]
+	return subSet.hits[SliderMiss]
 }
 
 func (set *OsuRuleSet) GetHP(cursor *graphics.Cursor) float64 {

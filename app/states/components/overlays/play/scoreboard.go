@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/thehowl/go-osuapi"
 	"github.com/wieku/danser-go/app/beatmap"
+	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/app/skin"
 	"github.com/wieku/danser-go/app/utils"
@@ -73,7 +74,8 @@ func NewScoreboard(beatMap *beatmap.BeatMap, omitID int64) *ScoreBoard {
 					log.Println(err)
 				}
 			} else {
-				scores, err := client.GetScores(osuapi.GetScoresOpts{BeatmapID: beatMaps[0].BeatmapID, Limit: 51})
+				mods := osuapi.Mods(difficulty.ParseMods(settings.Gameplay.ScoreBoard.Mods))
+				scores, err := client.GetScores(osuapi.GetScoresOpts{BeatmapID: beatMaps[0].BeatmapID, Mods: &mods, Limit: 51})
 				if len(scores) == 0 || err != nil {
 					log.Println("Can't find online scores!")
 					if err != nil {

@@ -158,6 +158,7 @@ func initGameplay() *gameplay {
 			HideOthers:     false,
 			ShowAvatars:    false,
 			ExplosionScale: 1.0,
+			Mods: "",
 		},
 		Mods: &mods{
 			hudElementOffset: &hudElementOffset{
@@ -309,6 +310,7 @@ type scoreBoard struct {
 	HideOthers     bool
 	ShowAvatars    bool
 	ExplosionScale float64
+	Mods string
 }
 
 type mods struct {

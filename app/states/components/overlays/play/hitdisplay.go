@@ -25,6 +25,9 @@ type HitDisplay struct {
 	hit50     int
 	hit50Text string
 
+	sliderBreak int
+	sliderBreakText string
+
 	hitMiss     int
 	hitMissText string
 }
@@ -38,6 +41,7 @@ func NewHitDisplay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor, fnt *font.F
 		hit100Text:  "0",
 		hit50Text:   "0",
 		hitMissText: "0",
+		sliderBreakText: "SB: 0",
 	}
 
 	return aSprite
@@ -45,6 +49,7 @@ func NewHitDisplay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor, fnt *font.F
 
 func (sprite *HitDisplay) Update(_ float64) {
 	h300, h100, h50, hMiss, _, _ := sprite.ruleset.GetHits(sprite.cursor)
+	sb := sprite.ruleset.GetSB(sprite.cursor)
 
 	if sprite.hit300 != int(h300) {
 		sprite.hit300 = int(h300)
@@ -64,6 +69,11 @@ func (sprite *HitDisplay) Update(_ float64) {
 	if sprite.hitMiss != int(hMiss) {
 		sprite.hitMiss = int(hMiss)
 		sprite.hitMissText = strconv.Itoa(sprite.hitMiss)
+	}
+
+	if sprite.sliderBreak != int(sb) {
+		sprite.sliderBreak = int(sb)
+		sprite.sliderBreakText = "SB: " + strconv.Itoa(sprite.sliderBreak)
 	}
 }
 
@@ -110,7 +120,8 @@ func (sprite *HitDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 	sprite.drawShadowed(batch, baseX, baseY, valueAlign, fontScale, offsetI, float32(alpha), sprite.hit100Text)
 	sprite.drawShadowed(batch, baseX+hSpacing, baseY+vSpacing, valueAlign, fontScale, offsetI+1, float32(alpha), sprite.hit50Text)
 	sprite.drawShadowed(batch, baseX+hSpacing*2, baseY+vSpacing*2, valueAlign, fontScale, offsetI+2, float32(alpha), sprite.hitMissText)
-
+	batch.SetColor(1, 1, 1, 0.8)
+	sprite.fnt.DrawOrigin(batch, baseX, baseY+hSpacing/2, valueAlign, fontScale*20, true, sprite.sliderBreakText)
 	batch.ResetTransform()
 }
 
