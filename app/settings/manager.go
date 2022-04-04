@@ -24,6 +24,7 @@ var watcher *fsnotify.Watcher
 func initStorage() {
 	fileStorage = &fileformat{
 		General:     General,
+		ApiV2:       ApiV2,
 		Graphics:    Graphics,
 		Audio:       Audio,
 		Input:       Input,

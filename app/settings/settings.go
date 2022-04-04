@@ -6,6 +6,7 @@ type fileformat struct {
 	srcData []byte
 
 	General     *general     `icon:"\uF0AD"`
+	ApiV2     *apiV2    `icon:"\uF0AD"`
 	Graphics    *graphics    `icon:"\uF108"`
 	Audio       *audio       `icon:"\uF028"`
 	Input       *input       `icon:"\uF11C"`

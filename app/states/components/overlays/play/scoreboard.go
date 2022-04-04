@@ -1,10 +1,12 @@
 package play
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/thehowl/go-osuapi"
 	"github.com/wieku/danser-go/app/beatmap"
-	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/app/skin"
 	"github.com/wieku/danser-go/app/utils"
@@ -15,10 +17,13 @@ import (
 	"github.com/wieku/danser-go/framework/math/animation/easing"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
+	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
 	"path/filepath"
 	"sort"
+	"strconv"
 )
 
 const spacing = 57.6
@@ -57,6 +62,94 @@ func NewScoreboard(beatMap *beatmap.BeatMap, omitID int64) *ScoreBoard {
 		return board
 	}
 
+	key, err := testAPI()
+	client := osuapi.NewClient(key)
+	if err != nil {
+		return board
+	}
+	beatMaps, err := client.GetBeatmaps(osuapi.GetBeatmapsOpts{BeatmapHash: beatMap.MD5})
+	if len(beatMaps) == 0 || err != nil {
+		log.Println("Online beatmap not found!")
+		if err != nil {
+			log.Println(err)
+			return board
+		}
+	}
+	if settings.Gameplay.ScoreBoard.ApiV2 {
+		scores, err := getScoresApiV2(strconv.Itoa(beatMaps[0].BeatmapID))
+		if err != nil {
+			return board
+		}
+		for i := 0; i < len(scores); i++ {
+			if scores[i].ID == omitID {
+				scores = append(scores[:i], scores[i+1:]...)
+				i--
+			}
+		}
+
+		sort.SliceStable(scores, func(i, j int) bool {
+			return scores[i].Score > scores[j].Score
+		})
+		for i := 0; i < mutils.Min(len(scores), 50); i++ {
+			s := scores[i]
+			for i := 0; i < len(scores); i++ {
+				if scores[i].ID == omitID {
+					scores = append(scores[:i], scores[i+1:]...)
+					i--
+				}
+			}
+			entry := NewScoreboardEntry(s.User.UserName, s.Score, int64(s.MaxCombo), i+1, false)
+
+			if settings.Gameplay.ScoreBoard.ShowAvatars {
+				entry.LoadAvatarID(s.UserID)
+			}
+
+			board.scores = append(board.scores, entry)
+			board.displayScores = append(board.displayScores, entry)
+		}
+	} else {
+		modStr := settings.Gameplay.ScoreBoard.Mods
+		mods := osuapi.ParseMods(modStr)
+		mods1 := &mods
+		if modStr == "" {
+			mods1 = nil
+		}
+		scores, err := client.GetScores(osuapi.GetScoresOpts{BeatmapID: beatMaps[0].BeatmapID, Mods: mods1, Limit: 51})
+		if len(scores) == 0 || err != nil {
+			log.Println("Can't find online scores!")
+			if err != nil {
+				log.Println(err)
+			}
+		} else {
+			for i := 0; i < len(scores); i++ {
+				if scores[i].ScoreID == omitID {
+					scores = append(scores[:i], scores[i+1:]...)
+					i--
+				}
+			}
+			sort.SliceStable(scores, func(i, j int) bool {
+				return scores[i].Score.Score > scores[j].Score.Score
+			})
+		}
+		for i := 0; i < mutils.Min(len(scores), 50); i++ {
+			s := scores[i]
+
+			entry := NewScoreboardEntry(s.Username, s.Score.Score, int64(s.MaxCombo), i+1, false)
+
+			if settings.Gameplay.ScoreBoard.ShowAvatars {
+				entry.LoadAvatarID(s.UserID)
+			}
+
+			board.scores = append(board.scores, entry)
+			board.displayScores = append(board.displayScores, entry)
+		}
+		log.Println("SCORES", len(scores))
+	}
+
+	return board
+}
+
+func testAPI() (string, error) {
 	key, err := utils.GetApiKey()
 	if err != nil {
 		log.Println(fmt.Sprintf("Please put your osu!api v1 key into '%s' file", filepath.Join(env.ConfigDir(), "api.txt")))
@@ -66,53 +159,92 @@ func NewScoreboard(beatMap *beatmap.BeatMap, omitID int64) *ScoreBoard {
 
 		if err != nil {
 			log.Println("Can't connect to osu!api:", err)
-		} else {
-			beatMaps, err := client.GetBeatmaps(osuapi.GetBeatmapsOpts{BeatmapHash: beatMap.MD5})
-			if len(beatMaps) == 0 || err != nil {
-				log.Println("Online beatmap not found!")
-				if err != nil {
-					log.Println(err)
-				}
-			} else {
-				mods := osuapi.Mods(difficulty.ParseMods(settings.Gameplay.ScoreBoard.Mods))
-				scores, err := client.GetScores(osuapi.GetScoresOpts{BeatmapID: beatMaps[0].BeatmapID, Mods: &mods, Limit: 51})
-				if len(scores) == 0 || err != nil {
-					log.Println("Can't find online scores!")
-					if err != nil {
-						log.Println(err)
-					}
-				} else {
-					for i := 0; i < len(scores); i++ {
-						if scores[i].ScoreID == omitID {
-							scores = append(scores[:i], scores[i+1:]...)
-							i--
-						}
-					}
+		}
+	}
+	return key, err
+}
 
-					sort.SliceStable(scores, func(i, j int) bool {
-						return scores[i].Score.Score > scores[j].Score.Score
-					})
+func getAccessToken() (string, error) {
+	c := &http.Client{}
+	body := map[string]any{
+		"client_id":     settings.ApiV2.ClientId,
+		"client_secret": settings.ApiV2.ClientSecret,
+		"grant_type":    "password",
+		"username":      settings.ApiV2.Username,
+		"password":      settings.ApiV2.Password,
+		"scope":         "*",
+	}
+	bodyByte, _ := json.Marshal(body)
+	req, err := http.NewRequest("POST", "https://osu.ppy.sh/oauth/token", bytes.NewReader(bodyByte))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
 
-					for i := 0; i < mutils.Min(len(scores), 50); i++ {
-						s := scores[i]
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	re := map[string]any{}
+	err = json.Unmarshal(data, &re)
+	accessToken := re["access_token"]
 
-						entry := NewScoreboardEntry(s.Username, s.Score.Score, int64(s.MaxCombo), i+1, false)
+	if accessToken == nil {
+		err := re["error"].(string)
+		return "", errors.New(err)
+	}
+	return accessToken.(string), err
+}
 
-						if settings.Gameplay.ScoreBoard.ShowAvatars {
-							entry.LoadAvatarID(s.UserID)
-						}
-
-						board.scores = append(board.scores, entry)
-						board.displayScores = append(board.displayScores, entry)
-					}
-				}
-
-				log.Println("SCORES", len(scores))
-			}
+func getScoresApiV2(beatmapID string) ([]*Score, error) {
+	c := &http.Client{}
+	str := "https://osu.ppy.sh/api/v2/beatmaps/" + beatmapID + "/scores?type=" + settings.Gameplay.ScoreBoard.ApiV2Type
+	mods := settings.Gameplay.ScoreBoard.Mods
+	if mods != "" {
+		modsSl := make([]string, len(mods)/2)
+		for n, modPart := range mods {
+			modsSl[n/2] += string(modPart)
+		}
+		for i := 0; i < len(modsSl); i++ {
+			str += "&mods[]=" + modsSl[i]
 		}
 	}
 
-	return board
+	req, err := http.NewRequest("GET", str, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := getAccessToken()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	scores := BeatmapScores{}
+	err = json.Unmarshal(data, &scores)
+	return scores.Scores, err
+}
+
+type BeatmapScores struct {
+	Scores []*Score
+}
+
+type User struct {
+	UserName string `json:"username"`
+}
+
+type Score struct {
+	Score    int64 `json:"score"`
+	ID       int64 `json:"id"`
+	User     User
+	MaxCombo int `json:"max_combo"`
+	UserID   int `json:"user_id"`
 }
 
 func (board *ScoreBoard) AddPlayer(name string, autoPlay bool) {

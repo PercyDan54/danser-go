@@ -8,6 +8,7 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/font"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/vector"
+	"math"
 	"strconv"
 )
 
@@ -120,7 +121,7 @@ func (sprite *HitDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 	sprite.drawShadowed(batch, baseX, baseY, valueAlign, fontScale, offsetI, float32(alpha), sprite.hit100Text)
 	sprite.drawShadowed(batch, baseX+hSpacing, baseY+vSpacing, valueAlign, fontScale, offsetI+1, float32(alpha), sprite.hit50Text)
 	sprite.drawShadowed(batch, baseX+hSpacing*2, baseY+vSpacing*2, valueAlign, fontScale, offsetI+2, float32(alpha), sprite.hitMissText)
-	batch.SetColor(1, 1, 1, 0.8)
+	batch.SetColor(1, 1, 1, math.Min(0.8, alpha))
 	sprite.fnt.DrawOrigin(batch, baseX, baseY+hSpacing/2, valueAlign, fontScale*20, true, sprite.sliderBreakText)
 	batch.ResetTransform()
 }
