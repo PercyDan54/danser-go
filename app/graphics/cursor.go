@@ -107,7 +107,7 @@ func NewCursor() *Cursor {
 		initCursor()
 	}
 
-	cursor := &Cursor{Position: vector.NewVec2f(100, 100)}
+	cursor := &Cursor{Position: vector.NewVec2f(256, -500)}
 	cursor.scale = animation.NewGlider(1.0)
 
 	cursor.lastSetting = settings.Skin.Cursor.UseSkinCursor

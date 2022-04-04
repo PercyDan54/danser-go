@@ -95,7 +95,7 @@ func newDanserRenderer() *danserRenderer {
 
 	vao.Attach(danserShader)
 
-	cursor := &danserRenderer{LastPos: vector.NewVec2f(100, 100), Position: vector.NewVec2f(100, 100), vao: vao, mutex: &sync.Mutex{}, RendPos: vector.NewVec2f(100, 100), vertices: make([]float32, points*3), firstTime: true}
+	cursor := &danserRenderer{LastPos: vector.NewVec2f(256, -500), Position: vector.NewVec2f(256, -500), vao: vao, mutex: &sync.Mutex{}, RendPos: vector.NewVec2f(256, -500), vertices: make([]float32, points*3), firstTime: true}
 	cursor.vecSize = 3
 
 	return cursor
