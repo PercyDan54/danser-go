@@ -34,3 +34,4 @@ var PITCH = 1.0
 var TAG = 1
 var RECORD = false
 var REPLAY = ""
+var LOCALOFFSET = 0

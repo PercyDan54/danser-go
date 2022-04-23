@@ -8,7 +8,6 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/font"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"math"
 	"strconv"
 )
 
@@ -17,64 +16,63 @@ type HitDisplay struct {
 	cursor  *graphics.Cursor
 	fnt     *font.Font
 
-	hit300     int
+	hit300     uint
 	hit300Text string
 
-	hit100     int
+	hit100     uint
 	hit100Text string
 
-	hit50     int
+	hit50     uint
 	hit50Text string
 
-	sliderBreak int
-	sliderBreakText string
-
-	hitMiss     int
+	hitMiss     uint
 	hitMissText string
+
+	sliderBreaks     uint
+	sliderBreaksText string
 }
 
 func NewHitDisplay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor, fnt *font.Font) *HitDisplay {
 	aSprite := &HitDisplay{
-		ruleset:     ruleset,
-		cursor:      cursor,
-		fnt:         fnt,
-		hit300Text:  "0",
-		hit100Text:  "0",
-		hit50Text:   "0",
-		hitMissText: "0",
-		sliderBreakText: "SB: 0",
+		ruleset:          ruleset,
+		cursor:           cursor,
+		fnt:              fnt,
+		hit300Text:       "0",
+		hit100Text:       "0",
+		hit50Text:        "0",
+		hitMissText:      "0",
+		sliderBreaksText: "0",
 	}
 
 	return aSprite
 }
 
 func (sprite *HitDisplay) Update(_ float64) {
-	h300, h100, h50, hMiss, _, _ := sprite.ruleset.GetHits(sprite.cursor)
-	sb := sprite.ruleset.GetSB(sprite.cursor)
+	score := sprite.ruleset.GetScore(sprite.cursor)
 
-	if sprite.hit300 != int(h300) {
-		sprite.hit300 = int(h300)
-		sprite.hit300Text = strconv.Itoa(sprite.hit300)
+	if sprite.hit300 != score.Count300 {
+		sprite.hit300 = score.Count300
+		sprite.hit300Text = strconv.Itoa(int(sprite.hit300))
 	}
 
-	if sprite.hit100 != int(h100) {
-		sprite.hit100 = int(h100)
-		sprite.hit100Text = strconv.Itoa(sprite.hit100)
+	if sprite.hit100 != score.Count100 {
+		sprite.hit100 = score.Count100
+		sprite.hit100Text = strconv.Itoa(int(sprite.hit100))
 	}
 
-	if sprite.hit50 != int(h50) {
-		sprite.hit50 = int(h50)
-		sprite.hit50Text = strconv.Itoa(sprite.hit50)
+	if sprite.hit50 != score.Count50 {
+		sprite.hit50 = score.Count50
+		sprite.hit50Text = strconv.Itoa(int(sprite.hit50))
 	}
 
-	if sprite.hitMiss != int(hMiss) {
-		sprite.hitMiss = int(hMiss)
-		sprite.hitMissText = strconv.Itoa(sprite.hitMiss)
+	if sprite.hitMiss != score.CountMiss {
+		sprite.hitMiss = score.CountMiss
+		sprite.hitMissText = strconv.Itoa(int(sprite.hitMiss))
 	}
 
-	if sprite.sliderBreak != int(sb) {
-		sprite.sliderBreak = int(sb)
-		sprite.sliderBreakText = "SB: " + strconv.Itoa(sprite.sliderBreak)
+	if sprite.sliderBreaks != score.CountSB {
+		sprite.sliderBreaks = score.CountSB
+		sprite.sliderBreaksText = strconv.Itoa(int(sprite.sliderBreaks))
 	}
 }
 
@@ -97,16 +95,22 @@ func (sprite *HitDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 
 	fontScale := scale * settings.Gameplay.HitCounter.FontScale
 
-	align := vector.ParseOrigin(settings.Gameplay.HitCounter.Align).AddS(1, 1)
+	align := vector.ParseOrigin(settings.Gameplay.HitCounter.Align).AddS(1, 1).Scl(0.5)
+
+	bC := 3.0
 
 	if settings.Gameplay.HitCounter.Show300 {
-		align = align.Scl(1.5)
+		bC += 1.0
+	}
+
+	if settings.Gameplay.HitCounter.ShowSliderBreaks {
+		bC += 1.0
 	}
 
 	valueAlign := vector.ParseOrigin(settings.Gameplay.HitCounter.ValueAlign)
 
-	baseX := settings.Gameplay.HitCounter.XPosition - align.X*hSpacing
-	baseY := settings.Gameplay.HitCounter.YPosition - align.Y*vSpacing
+	baseX := settings.Gameplay.HitCounter.XPosition - align.X*hSpacing*(bC-1)
+	baseY := settings.Gameplay.HitCounter.YPosition - align.Y*vSpacing*(bC-1)
 
 	offsetI := 0
 
@@ -121,8 +125,11 @@ func (sprite *HitDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 	sprite.drawShadowed(batch, baseX, baseY, valueAlign, fontScale, offsetI, float32(alpha), sprite.hit100Text)
 	sprite.drawShadowed(batch, baseX+hSpacing, baseY+vSpacing, valueAlign, fontScale, offsetI+1, float32(alpha), sprite.hit50Text)
 	sprite.drawShadowed(batch, baseX+hSpacing*2, baseY+vSpacing*2, valueAlign, fontScale, offsetI+2, float32(alpha), sprite.hitMissText)
-	batch.SetColor(1, 1, 1, math.Min(0.8, alpha))
-	sprite.fnt.DrawOrigin(batch, baseX, baseY+hSpacing/2, valueAlign, fontScale*20, true, sprite.sliderBreakText)
+
+	if settings.Gameplay.HitCounter.ShowSliderBreaks {
+		sprite.drawShadowed(batch, baseX+hSpacing*3, baseY+vSpacing*3, valueAlign, fontScale, offsetI+3, float32(alpha), sprite.sliderBreaksText)
+	}
+
 	batch.ResetTransform()
 }
 

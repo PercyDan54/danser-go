@@ -30,6 +30,12 @@ import (
 	"strings"
 )
 
+type stats struct {
+	pp       float64
+	score    int64
+	accuracy float64
+}
+
 type knockoutPlayer struct {
 	fade   *animation.Glider
 	slide  *animation.Glider
@@ -47,8 +53,9 @@ type knockoutPlayer struct {
 	breakTime int64
 	pp        float64
 	score     int64
-	scores    []int64
-	pps       []float64
+
+	perObjectStats []stats
+
 	displayHp float64
 
 	lastHit  osu.HitResult
@@ -155,7 +162,7 @@ func NewKnockoutOverlay(replayController *dance.ReplayController) *KnockoutOverl
 
 	for i, r := range replayController.GetReplays() {
 		overlay.names[replayController.GetCursors()[i]] = r.Name
-		overlay.players[r.Name] = &knockoutPlayer{animation.NewGlider(1), animation.NewGlider(0), animation.NewGlider(overlay.ScaledHeight * 0.9 * 1.04 / (51)), animation.NewGlider(float64(i)), animation.NewTargetGlider(0, 0), animation.NewTargetGlider(0, 2), animation.NewTargetGlider(0, 2), 0, 0, r.MaxCombo, false, 0, 0.0, 0, make([]int64, len(replayController.GetBeatMap().HitObjects)), make([]float64, len(replayController.GetBeatMap().HitObjects)), 0.0, osu.Hit300, animation.NewGlider(0), animation.NewGlider(0), r.Name, i, i}
+		overlay.players[r.Name] = &knockoutPlayer{animation.NewGlider(1), animation.NewGlider(0), animation.NewGlider(overlay.ScaledHeight * 0.9 * 1.04 / (51)), animation.NewGlider(float64(i)), animation.NewTargetGlider(0, 0), animation.NewTargetGlider(0, 2), animation.NewTargetGlider(0, 2), 0, 0, r.MaxCombo, false, 0, 0.0, 0, make([]stats, len(replayController.GetBeatMap().HitObjects)), 0.0, osu.Hit300, animation.NewGlider(0), animation.NewGlider(0), r.Name, i, i}
 		overlay.players[r.Name].index.SetEasing(easing.InOutQuad)
 		overlay.playersArray = append(overlay.playersArray, overlay.players[r.Name])
 	}
@@ -193,9 +200,11 @@ func NewKnockoutOverlay(replayController *dance.ReplayController) *KnockoutOverl
 				mainCond := true
 				switch cond {
 				case "pp":
-					mainCond = overlay.playersArray[i].pps[number] > overlay.playersArray[j].pps[number]
+					mainCond = overlay.playersArray[i].perObjectStats[number].pp > overlay.playersArray[j].perObjectStats[number].pp
+				case "acc", "accuracy":
+					mainCond = overlay.playersArray[i].perObjectStats[number].accuracy > overlay.playersArray[j].perObjectStats[number].accuracy
 				default:
-					mainCond = overlay.playersArray[i].scores[number] > overlay.playersArray[j].scores[number]
+					mainCond = overlay.playersArray[i].perObjectStats[number].score > overlay.playersArray[j].perObjectStats[number].score
 				}
 
 				return (!overlay.playersArray[i].hasBroken && overlay.playersArray[j].hasBroken) || ((!overlay.playersArray[i].hasBroken && !overlay.playersArray[j].hasBroken) && mainCond) || ((overlay.playersArray[i].hasBroken && overlay.playersArray[j].hasBroken) && (overlay.playersArray[i].breakTime > overlay.playersArray[j].breakTime || (overlay.playersArray[i].breakTime == overlay.playersArray[j].breakTime && mainCond)))
@@ -259,20 +268,20 @@ func (overlay *KnockoutOverlay) hitReceived(cursor *graphics.Cursor, time int64,
 	}
 
 	player.score = score
-	player.scores[number] = score
-
 	player.pp = ppResults.Total
-	player.pps[number] = ppResults.Total
 
-	player.scoreDisp.SetTarget(float64(score))
+	player.scoreDisp.SetValue(float64(score), false)
+	player.ppDisp.SetValue(player.pp, false)
 
-	player.ppDisp.SetTarget(player.pp)
+	sc := overlay.controller.GetRuleset().GetScore(cursor)
 
-	acc, _, _, _ := overlay.controller.GetRuleset().GetResults(cursor)
+	player.perObjectStats[number].score = score
+	player.perObjectStats[number].pp = ppResults.Total
+	player.perObjectStats[number].accuracy = sc.Accuracy
 
-	player.accDisp.SetTarget(acc)
+	player.accDisp.SetValue(sc.Accuracy, false)
 
-	if comboResult == osu.ComboResults.Increase {
+	if comboResult == osu.Increase {
 		player.sCombo++
 	}
 
@@ -290,7 +299,7 @@ func (overlay *KnockoutOverlay) hitReceived(cursor *graphics.Cursor, time int64,
 		}
 	}
 
-	comboBreak := comboResult == osu.ComboResults.Reset
+	comboBreak := comboResult == osu.Reset
 	if (settings.Knockout.Mode == settings.SSOrQuit && (acceptableHits || comboBreak)) || (comboBreak && number != 0) {
 
 		if !player.hasBroken {
@@ -299,7 +308,9 @@ func (overlay *KnockoutOverlay) hitReceived(cursor *graphics.Cursor, time int64,
 					overlay.deathBubbles = append(overlay.deathBubbles, newBubble(position, overlay.normalTime, overlay.names[cursor], player.sCombo, resultClean, comboResult))
 					log.Println(overlay.names[cursor], "has broken! Combo:", player.sCombo)
 				}
-			} else if settings.Knockout.Mode == settings.SSOrQuit || settings.Knockout.Mode == settings.ComboBreak || (settings.Knockout.Mode == settings.MaxCombo && math.Abs(float64(player.sCombo-player.maxCombo)) < 5) {
+			} else if settings.Knockout.Mode == settings.SSOrQuit ||
+				(settings.Knockout.Mode == settings.ComboBreak && time > int64(settings.Knockout.GraceEndTime*1000)) ||
+				(settings.Knockout.Mode == settings.MaxCombo && math.Abs(float64(player.sCombo-player.maxCombo)) < 5) {
 				//Fade out player name
 				player.hasBroken = true
 				player.breakTime = time
@@ -397,7 +408,7 @@ func (overlay *KnockoutOverlay) DrawNormal(batch *batch.QuadBatch, colors []colo
 		if bubble.deathFade.GetValue() >= 0.01 {
 			if settings.Knockout.Mode == settings.OneVsOne {
 				val := strconv.Itoa(int(bubble.lastHit.ScoreValue()))
-				if bubble.lastCombo == osu.ComboResults.Reset {
+				if bubble.lastCombo == osu.Reset {
 					val = "X"
 				}
 
@@ -413,7 +424,7 @@ func (overlay *KnockoutOverlay) DrawNormal(batch *batch.QuadBatch, colors []colo
 
 				batch.SetColor(1, 1, 1, alpha*bubble.deathFade.GetValue())
 
-				if bubble.lastCombo == osu.ComboResults.Reset {
+				if bubble.lastCombo == osu.Reset {
 					combo := fmt.Sprintf("%dx", bubble.combo)
 					comboWidth := overlay.font.GetWidth(scl*0.8, combo)
 					overlay.font.Draw(batch, bubble.deathX-comboWidth/2, bubble.deathSlide.GetValue()+scl*0.8/2, scl*0.8, combo)
@@ -539,8 +550,7 @@ func (overlay *KnockoutOverlay) DrawHUD(batch *batch.QuadBatch, colors []color2.
 		batch.SetTranslation(vector.NewVec2d(4*scl+scl*0.1+nWidth+xSlideLeft, rowBaseY))
 
 		if r.Grade != osu.NONE {
-			gText := strings.ToLower(strings.ReplaceAll(osu.GradesText[r.Grade], "SS", "X"))
-			text := skin.GetTexture("ranking-" + gText + "-small")
+			text := skin.GetTexture("ranking-" + r.Grade.TextureName() + "-small")
 			batch.DrawUnit(*text)
 		}
 

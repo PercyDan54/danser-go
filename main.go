@@ -107,7 +107,7 @@ func run() {
 		creator := flag.String("creator", "", creatorDesc)
 		flag.StringVar(creator, "c", "", creatorDesc+shorthand)
 
-		settingsVersion := flag.String("settings", "", "Specify settings version, -settings=a means that settings-a.json will be loaded")
+		settingsVersion := flag.String("settings", "", "Specify settings version, -settings=abc means that settings/abc.json will be loaded")
 		cursors := flag.Int("cursors", 1, "How many repeated cursors should be visible, recommended 2 for mirror, 8 for mandala")
 		tag := flag.Int("tag", 1, "How many cursors should be \"playing\" specific map. 2 means that 1st cursor clicks the 1st object, 2nd clicks 2nd object, 1st clicks 3rd and so on")
 		knockout := flag.Bool("knockout", false, "Use knockout feature")
@@ -143,6 +143,8 @@ func run() {
 		od := flag.Float64("od", math.NaN(), "Modify map's OD, only in cursordance/play modes")
 		cs := flag.Float64("cs", math.NaN(), "Modify map's CS, only in cursordance/play modes")
 		hp := flag.Float64("hp", math.NaN(), "Modify map's HP, only in cursordance/play modes")
+
+		offset := flag.Int("offset", 0, "Specify local audio offset in ms. Applies to recordings, unlike 'Audio.Offset'. Inverted compared to stable's local offset.")
 
 		flag.Parse()
 
@@ -225,6 +227,7 @@ func run() {
 		settings.START = *start
 		settings.END = *end
 		settings.RECORD = recordMode || screenshotMode
+		settings.LOCALOFFSET = *offset
 
 		newSettings := settings.LoadSettings(*settingsVersion)
 
@@ -360,8 +363,6 @@ func run() {
 			settings.Graphics.WindowWidth = int64(settings.Recording.FrameWidth)
 			settings.Graphics.WindowHeight = int64(settings.Recording.FrameHeight)
 			settings.Playfield.LeadInTime = 0
-		} else {
-			discord.Connect()
 		}
 
 		if screenshotMode {
@@ -464,6 +465,7 @@ func run() {
 		}
 
 		if !settings.RECORD {
+			discord.Connect()
 			win.Show()
 		}
 
