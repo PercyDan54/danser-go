@@ -20,7 +20,7 @@ import (
 
 const Tolerance2B = 3
 
-type ClickAction int64
+type ClickAction uint8
 
 const (
 	Ignored = ClickAction(iota)
@@ -28,7 +28,7 @@ const (
 	Click
 )
 
-type ComboResult int64
+type ComboResult uint8
 
 const (
 	Reset = ComboResult(iota)
@@ -234,8 +234,10 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, mods []
 		sc.Init(beatMap, player)
 
 		ruleset.cursors[cursor] = &subSet{
-			player:         player,
-			score:          new(Score),
+			player: player,
+			score: &Score{
+				Accuracy: 100,
+			},
 			ppv2:           &performance.PPv2{},
 			hp:             hp,
 			recoveries:     recoveries,
