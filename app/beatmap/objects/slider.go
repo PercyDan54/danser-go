@@ -16,7 +16,6 @@ import (
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"log"
 	"math"
 	"sort"
 	"strconv"
@@ -272,7 +271,7 @@ func (slider *Slider) createDummyCircle(time float64, inheritStart, inheritEnd b
 	return circle
 }
 
-func (slider *Slider) SetTiming(timings *Timings) {
+func (slider *Slider) SetTiming(timings *Timings, diffCalcOnly bool) {
 	slider.Timings = timings
 	slider.TPoint = timings.GetPointAt(slider.StartTime)
 
@@ -334,6 +333,10 @@ func (slider *Slider) SetTiming(timings *Timings) {
 	sort.Slice(slider.ScorePointsLazer, func(i, j int) bool {
 		return slider.ScorePointsLazer[i].Time < slider.ScorePointsLazer[j].Time
 	})
+
+	if diffCalcOnly { // We're not interested in stable-like path in difficulty calculator mode
+		return
+	}
 
 	scoringLengthTotal := 0.0
 	scoringDistance := 0.0
@@ -413,9 +416,9 @@ func (slider *Slider) SetTiming(timings *Timings) {
 
 	slider.EndPosRaw = slider.GetPositionAt(slider.EndTime)
 
-	if len(slider.scorePath) == 0 || slider.StartTime == slider.EndTime {
-		log.Println("Warning: slider", slider.HitObjectID, "at ", slider.StartTime, "is broken.")
-	}
+	//if len(slider.scorePath) == 0 || slider.StartTime == slider.EndTime {
+	//	log.Println("Warning: slider", slider.HitObjectID, "at ", slider.StartTime, "is broken.")
+	//}
 
 	slider.calculateFollowPoints()
 
@@ -522,7 +525,7 @@ func (slider *Slider) SetDifficulty(diff *difficulty.Difficulty) {
 		circle.StackOffset = slider.StackOffset
 		circle.StackOffsetHR = slider.StackOffsetHR
 		circle.StackOffsetEZ = slider.StackOffsetEZ
-		circle.SetTiming(slider.Timings)
+		circle.SetTiming(slider.Timings, false)
 		circle.SetDifficulty(diff)
 
 		slider.endCircles = append(slider.endCircles, circle)
