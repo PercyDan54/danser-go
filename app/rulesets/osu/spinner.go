@@ -3,7 +3,6 @@ package osu
 import (
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/beatmap/objects"
-	"github.com/wieku/danser-go/app/settings"
 	"math"
 )
 
@@ -72,7 +71,7 @@ func (spinner *Spinner) UpdateFor(player *difficultyPlayer, time int64, _ bool) 
 
 	state := spinner.state[player]
 
-	timeDiff := FrameTime * settings.SPEED
+	timeDiff := float64(time - player.cursor.LastFrameTime)
 	if player.cursor.LastFrameTime == 0 {
 		timeDiff = FrameTime
 	}
@@ -82,7 +81,7 @@ func (spinner *Spinner) UpdateFor(player *difficultyPlayer, time int64, _ bool) 
 
 		if player.cursor.IsReplayFrame && time > int64(spinner.hitSpinner.GetStartTime()) && time < int64(spinner.hitSpinner.GetEndTime()) {
 			decay1 := math.Pow(0.9, timeDiff/FrameTime)
-			state.rpm = state.rpm*decay1 + (1.0-decay1)*(math.Abs(state.currentVelocity)*1000)/(math.Pi*2)*(1000.0/float64(time - player.cursor.LastFrameTime)) * settings.SPEED
+			state.rpm = state.rpm*decay1 + (1.0-decay1)*(math.Abs(state.currentVelocity)*1000)/(math.Pi*2)*60
 
 			mouseAngle := float64(player.cursor.RawPosition.Sub(spinnerPosition).AngleR())
 
