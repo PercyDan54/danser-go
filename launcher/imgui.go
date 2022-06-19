@@ -86,8 +86,6 @@ func SetupImgui(win *glfw.Window) {
 		panic(err)
 	}
 
-	conf := imgui.NewFontConfig()
-
 	//fontawesome is quite large so for now we will load only needed glyphs
 	awesomeBuilder := &imgui.GlyphRangesBuilder{}
 	awesomeBuilder.Add(0xF04B, 0xF04B)
@@ -108,12 +106,15 @@ func SetupImgui(win *glfw.Window) {
 	awesomeBuilder.Add(0xE599, 0xE599)
 	awesomeBuilder.Add(0xF0CB, 0xF0CB)
 	awesomeBuilder.Add(0xF03D, 0xF03D)
+	awesomeBuilder.Add(0xF882, 0xF882)
+	awesomeBuilder.Add(0xF15D, 0xF15D)
+	awesomeBuilder.Add(0xF084, 0xF084)
 
 	//awesomeBuilder.Add(0x0020, 0xffff)
 
 	awesomeRange := awesomeBuilder.Build()
 
-	FontAw = ImIO.Fonts().AddFontFromMemoryTTFV(fontAwesomeBytes, 32, conf, awesomeRange.GlyphRanges)
+	FontAw = ImIO.Fonts().AddFontFromMemoryTTFV(fontAwesomeBytes, 32, imgui.DefaultFontConfig, awesomeRange.GlyphRanges)
 
 	img0 := ImIO.Fonts().TextureDataAlpha8()
 	img1 := ImIO.Fonts().TextureDataRGBA32()
