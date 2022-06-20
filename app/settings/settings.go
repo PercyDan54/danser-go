@@ -22,7 +22,7 @@ type Config struct {
 	srcData []byte
 
 	General     *general     `icon:"\uF0AD"`
-	ApiV2       *apiV2       `icon:"\uF0AD"`
+	ApiV2       *apiV2       `icon:"\uF084"`
 	Graphics    *graphics    `icon:"\uF108"`
 	Audio       *audio       `icon:"\uF028"`
 	Input       *input       `icon:"\uF11C"`
@@ -39,6 +39,7 @@ type Config struct {
 
 type CombinedConfig struct {
 	Credentials *credentials `icon:"\uF084" label:"Credentials (Global)"`
+	ApiV2       *apiV2       `icon:"\uF084"`
 	General     *general     `icon:"\uF0AD"`
 	Graphics    *graphics    `icon:"\uF108"`
 	Audio       *audio       `icon:"\uF028"`
@@ -172,6 +173,7 @@ func (config *Config) migrateCursorDance() {
 
 func (config *Config) attachToGlobals() {
 	General = config.General
+	ApiV2 = config.ApiV2
 	Graphics = config.Graphics
 	Audio = config.Audio
 	Input = config.Input
@@ -190,6 +192,7 @@ func (config *Config) GetCombined() *CombinedConfig {
 	return &CombinedConfig{
 		Credentials: Credentails,
 		General:     config.General,
+		ApiV2:       config.ApiV2,
 		Graphics:    config.Graphics,
 		Audio:       config.Audio,
 		Input:       config.Input,

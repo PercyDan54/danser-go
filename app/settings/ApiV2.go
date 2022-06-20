@@ -11,5 +11,5 @@ type apiV2 struct {
 	ClientId     int
 	ClientSecret string
 	Username     string
-	Password     string
+	Password     string `password:"true"`
 }
