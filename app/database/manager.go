@@ -26,7 +26,7 @@ import (
 
 var dbFile *sql.DB
 
-const databaseVersion = 20220605
+const databaseVersion = 20220622
 
 var currentPreVersion = databaseVersion
 var currentSchemaPreVersion = databaseVersion
@@ -65,6 +65,7 @@ func Init() error {
 		&M20210326{},
 		&M20210423{},
 		&M20220605{},
+		&M20220622{},
 	}
 
 	dbFile, err = sql.Open("sqlite3", filepath.Join(env.DataDir(), "danser.db"))
@@ -73,7 +74,7 @@ func Init() error {
 	}
 
 	_, err = dbFile.Exec(`
-		CREATE TABLE IF NOT EXISTS beatmaps (dir TEXT, file TEXT, lastModified INTEGER, title TEXT, titleUnicode TEXT, artist TEXT, artistUnicode TEXT, creator TEXT, version TEXT, source TEXT, tags TEXT, cs REAL, ar REAL, sliderMultiplier REAL, sliderTickRate REAL, audioFile TEXT, previewTime INTEGER, sampleSet INTEGER, stackLeniency REAL, mode INTEGER, bg TEXT, md5 TEXT, dateAdded INTEGER, playCount INTEGER, lastPlayed INTEGER, hpdrain REAL, od REAL, stars REAL DEFAULT -1, bpmMin REAL, bpmMax REAL, circles INTEGER, sliders INTEGER, spinners INTEGER, endTime INTEGER, setID INTEGER, mapID INTEGER, starsVersion INTEGER DEFAULT 0);
+		CREATE TABLE IF NOT EXISTS beatmaps (dir TEXT, file TEXT, lastModified INTEGER, title TEXT, titleUnicode TEXT, artist TEXT, artistUnicode TEXT, creator TEXT, version TEXT, source TEXT, tags TEXT, cs REAL, ar REAL, sliderMultiplier REAL, sliderTickRate REAL, audioFile TEXT, previewTime INTEGER, sampleSet INTEGER, stackLeniency REAL, mode INTEGER, bg TEXT, md5 TEXT, dateAdded INTEGER, playCount INTEGER, lastPlayed INTEGER, hpdrain REAL, od REAL, stars REAL DEFAULT -1, bpmMin REAL, bpmMax REAL, circles INTEGER, sliders INTEGER, spinners INTEGER, endTime INTEGER, setID INTEGER, mapID INTEGER, starsVersion INTEGER DEFAULT 0, localOffset INTEGER DEFAULT 0);
 		CREATE INDEX IF NOT EXISTS idx ON beatmaps (dir, file);
 		CREATE TABLE IF NOT EXISTS info (key TEXT NOT NULL UNIQUE, value TEXT);
 	`)
@@ -206,10 +207,12 @@ const (
 	Comparison
 	Cleanup
 	Import
-	Finalize
+	Finished
 )
 
 func importMaps(skipDatabaseCheck bool, importListener ImportListener) {
+	const workers = 4
+
 	cachedFolders, mapsInDB := getLastModified()
 
 	candidates := make([]mapLocation, 0)
@@ -316,28 +319,18 @@ func importMaps(skipDatabaseCheck bool, importListener ImportListener) {
 		log.Println("DatabaseManager: Removal complete.")
 	}
 
-	if len(mapsToImport) > 0 {
-		log.Println("DatabaseManager: Starting import of", len(mapsToImport), "maps. It may take up to several minutes...")
+	if len(mapsToImport) == 0 {
+		return
+	}
 
-		recChannel := make(chan int, 4)
+	log.Println("DatabaseManager: Starting import of", len(mapsToImport), "maps. It may take up to several minutes...")
 
-		processed := 0
-		target := len(mapsToImport)
+	trySendStatus(importListener, Import, 0, len(mapsToImport))
 
-		goroutines.Run(func() {
-			trySendStatus(importListener, Import, processed, target)
+	receive := make(chan *beatmap.BeatMap, workers)
 
-			for range recChannel {
-				processed++
-				trySendStatus(importListener, Import, processed, target)
-			}
-		})
-
-		newBeatmaps := util.Balance(4, mapsToImport, func(candidate mapLocation) *beatmap.BeatMap {
-			defer func() {
-				recChannel <- 0
-			}()
-
+	goroutines.Run(func() {
+		util.BalanceChan(workers, mapsToImport, receive, func(candidate mapLocation) *beatmap.BeatMap {
 			partialPath := filepath.Join(candidate.dir, candidate.file)
 			mapPath := filepath.Join(songsDir, partialPath)
 
@@ -375,19 +368,35 @@ func importMaps(skipDatabaseCheck bool, importListener ImportListener) {
 			return nil
 		})
 
-		close(recChannel)
+		close(receive)
+	})
 
-		if len(newBeatmaps) > 0 {
-			trySendStatus(importListener, Finalize, 100, 100)
+	var numImported int
+	var imported []*beatmap.BeatMap
 
-			log.Println("DatabaseManager: Imported", len(newBeatmaps), "new/updated beatmaps. Inserting to database...")
+	for bMap := range receive {
+		numImported++
+		trySendStatus(importListener, Import, numImported, len(mapsToImport))
 
-			insertBeatmaps(newBeatmaps)
+		imported = append(imported, bMap)
 
-			log.Println("DatabaseManager: Insert complete.")
-		} else {
-			log.Println("DatabaseManager: No new/updated beatmaps imported.")
+		if len(imported) >= 1000 { // Commit to database every 1k beatmaps to not lose progress in case of crash/close
+			insertBeatmaps(imported)
+
+			imported = imported[:0]
 		}
+	}
+
+	if len(imported) > 0 {
+		insertBeatmaps(imported)
+	}
+
+	trySendStatus(importListener, Finished, 100, 100)
+
+	if numImported > 0 {
+		log.Println("DatabaseManager: Imported", numImported, "new/updated beatmaps.")
+	} else {
+		log.Println("DatabaseManager: No new/updated beatmaps imported.")
 	}
 }
 
@@ -398,6 +407,8 @@ func trySendStatus(listener ImportListener, stage ImportStage, progress, target 
 }
 
 func UpdateStarRating(maps []*beatmap.BeatMap, progressListener func(processed, target int)) {
+	const workers = 1 // For now sing only one thread because calculating 4 aspire maps at once can OOM since (de)allocation can't keep up with many complex sliders
+
 	var toCalculate []*beatmap.BeatMap
 
 	for _, b := range maps {
@@ -406,25 +417,19 @@ func UpdateStarRating(maps []*beatmap.BeatMap, progressListener func(processed, 
 		}
 	}
 
-	if len(toCalculate) > 0 {
-		recChannel := make(chan int, 4)
+	if len(toCalculate) == 0 {
+		return
+	}
 
-		processed := 0
-		target := len(toCalculate)
+	if progressListener != nil {
+		progressListener(0, len(toCalculate))
+	}
 
-		goroutines.Run(func() {
-			progressListener(processed, target)
+	receive := make(chan *beatmap.BeatMap, workers)
 
-			for range recChannel {
-				processed++
-				progressListener(processed, target)
-			}
-		})
-
-		util.Balance(1, toCalculate, func(bMap *beatmap.BeatMap) *beatmap.BeatMap { //Using only one thread because calculating 4 aspire maps at once can OOM since (de)allocation can't keep up with many complex sliders
+	goroutines.Run(func() {
+		util.BalanceChan(workers, toCalculate, receive, func(bMap *beatmap.BeatMap) *beatmap.BeatMap {
 			defer func() {
-				recChannel <- 0
-
 				bMap.StarsVersion = performance.CurrentVersion
 				bMap.Clear() //Clear objects and timing to avoid OOM
 
@@ -448,46 +453,75 @@ func UpdateStarRating(maps []*beatmap.BeatMap, progressListener func(processed, 
 			return bMap
 		})
 
-		close(recChannel)
+		close(receive)
+	})
 
-		log.Println("DatabaseManager: Star rating calculated!")
+	var calculated []*beatmap.BeatMap
+	var progress int
 
-		tx, err := dbFile.Begin()
-		if err != nil {
-			panic(err)
+	for bMap := range receive {
+		if progressListener != nil {
+			progress++
+			progressListener(progress, len(toCalculate))
 		}
 
-		st, err := tx.Prepare("UPDATE beatmaps SET stars = ?, starsVersion = ? WHERE dir = ? AND file = ?")
-		if err != nil {
-			panic(err)
+		calculated = append(calculated, bMap)
+
+		if len(calculated) >= 1000 { // Commit to database every 1k beatmaps to not lose progress in case of crash/close
+			pushSRToDB(calculated)
+
+			calculated = calculated[:0]
 		}
+	}
 
-		for _, bMap := range toCalculate {
-			_, err1 := st.Exec(
-				bMap.Stars,
-				bMap.StarsVersion,
-				bMap.Dir,
-				bMap.File)
+	if len(calculated) > 0 {
+		pushSRToDB(calculated)
+	}
 
-			if err1 != nil {
-				log.Println(err1)
-			}
+	log.Println("DatabaseManager: Star rating updated!")
+}
+
+func pushSRToDB(maps []*beatmap.BeatMap) {
+	tx, err := dbFile.Begin()
+	if err != nil {
+		panic(err)
+	}
+
+	st, err := tx.Prepare("UPDATE beatmaps SET stars = ?, starsVersion = ? WHERE dir = ? AND file = ?")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, bMap := range maps {
+		_, err1 := st.Exec(
+			bMap.Stars,
+			bMap.StarsVersion,
+			bMap.Dir,
+			bMap.File)
+
+		if err1 != nil {
+			log.Println(err1)
 		}
+	}
 
-		if err = st.Close(); err != nil {
-			panic(err)
-		}
+	if err = st.Close(); err != nil {
+		panic(err)
+	}
 
-		if err = tx.Commit(); err != nil {
-			panic(err)
-		}
-
-		log.Println("DatabaseManager: Star rating updated!")
+	if err = tx.Commit(); err != nil {
+		panic(err)
 	}
 }
 
 func UpdatePlayStats(beatmap *beatmap.BeatMap) {
 	_, err := dbFile.Exec("UPDATE beatmaps SET playCount = ?, lastPlayed = ? WHERE dir = ? AND file = ?", beatmap.PlayCount, beatmap.LastPlayed, beatmap.Dir, beatmap.File)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func UpdateLocalOffset(beatmap *beatmap.BeatMap) {
+	_, err := dbFile.Exec("UPDATE beatmaps SET localOffset = ? WHERE dir = ? AND file = ?", beatmap.LocalOffset, beatmap.Dir, beatmap.File)
 	if err != nil {
 		log.Println(err)
 	}
@@ -626,11 +660,12 @@ func insertBeatmaps(bMaps []*beatmap.BeatMap) {
 
 	if err == nil {
 		var st *sql.Stmt
-		st, err = tx.Prepare("INSERT INTO beatmaps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+		st, err = tx.Prepare("INSERT INTO beatmaps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
 		if err == nil {
 			for _, bMap := range bMaps {
-				_, err1 := st.Exec(bMap.Dir,
+				_, err1 := st.Exec(
+					bMap.Dir,
 					bMap.File,
 					bMap.LastModified,
 					bMap.Name,
@@ -667,6 +702,7 @@ func insertBeatmaps(bMaps []*beatmap.BeatMap) {
 					bMap.SetID,
 					bMap.ID,
 					bMap.StarsVersion,
+					bMap.LocalOffset,
 				)
 
 				if err1 != nil {
@@ -734,6 +770,7 @@ func loadBeatmapsFromDatabase() []*beatmap.BeatMap {
 			&beatMap.SetID,
 			&beatMap.ID,
 			&beatMap.StarsVersion,
+			&beatMap.LocalOffset,
 		)
 
 		beatMap.Diff.SetCS(mutils.ClampF(cs, 0, 10))

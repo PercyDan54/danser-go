@@ -21,38 +21,37 @@ type Config struct {
 	srcPath string
 	srcData []byte
 
-	General     *general     `icon:"\uF0AD"`
+	General     *general     `icon:"\uF0AD"` // wrench
 	ApiV2       *apiV2       `icon:"\uF084"`
-	Graphics    *graphics    `icon:"\uF108"`
-	Audio       *audio       `icon:"\uF028"`
-	Input       *input       `icon:"\uF11C"`
-	Gameplay    *gameplay    `icon:"\uF140"`
-	Skin        *skin        `icon:"\uF53F"`
-	Cursor      *cursor      `icon:"\uF245"`
-	Objects     *objects     `icon:"\uF1CD"`
-	Playfield   *playfield   `icon:"\uF853"`
+	Graphics    *graphics    `icon:"\uE163"` // display
+	Audio       *audio       `icon:"\uF028"` // volume-high
+	Input       *input       `icon:"\uF11C"` // keyboard
+	Gameplay    *gameplay    `icon:"\uF192"` // circle-dot
+	Skin        *skin        `icon:"\uF1FC"` // paintbrush
+	Cursor      *cursor      `icon:"\uF245"` // arrow-pointer
+	Objects     *objects     `icon:"\uF1E0"` // share-nodes
+	Playfield   *playfield   `icon:"\uF43C"` // chess-board
 	Dance       *danceOld    `json:",omitempty" icon:"\uF5B7"`
-	CursorDance *cursorDance `icon:"\uE599"`
-	Knockout    *knockout    `icon:"\uF0CB"`
-	Recording   *recording   `icon:"\uF03D"`
+	CursorDance *cursorDance `icon:"\uE599"` // worm
+	Knockout    *knockout    `icon:"\uF0CB"` // list-ol
+	Recording   *recording   `icon:"\uF03D"` // video
 }
 
 type CombinedConfig struct {
-	Credentials *credentials `icon:"\uF084" label:"Credentials (Global)"`
+	Credentials *credentials `icon:"\uF084" label:"Credentials (Global)"` // key
 	ApiV2       *apiV2       `icon:"\uF084"`
-	General     *general     `icon:"\uF0AD"`
-	Graphics    *graphics    `icon:"\uF108"`
-	Audio       *audio       `icon:"\uF028"`
-	Input       *input       `icon:"\uF11C"`
-	Gameplay    *gameplay    `icon:"\uF140"`
-	Skin        *skin        `icon:"\uF53F"`
-	Cursor      *cursor      `icon:"\uF245"`
-	Objects     *objects     `icon:"\uF1CD"`
-	Playfield   *playfield   `icon:"\uF853"`
-	Dance       *danceOld    `json:",omitempty" icon:"\uF5B7"`
-	CursorDance *cursorDance `icon:"\uE599"`
-	Knockout    *knockout    `icon:"\uF0CB"`
-	Recording   *recording   `icon:"\uF03D"`
+	General     *general     `icon:"\uF0AD"`                              // wrench
+	Graphics    *graphics    `icon:"\uE163"`                              // display
+	Audio       *audio       `icon:"\uF028"`                              // volume-high
+	Input       *input       `icon:"\uF11C"`                              // keyboard
+	Gameplay    *gameplay    `icon:"\uF192"`                              // circle-dot
+	Skin        *skin        `icon:"\uF1FC"`                              // paintbrush
+	Cursor      *cursor      `icon:"\uF245"`                              // arrow-pointer
+	Objects     *objects     `icon:"\uF1E0"`                              // share-nodes
+	Playfield   *playfield   `icon:"\uF43C"`                              // chess-board
+	CursorDance *cursorDance `icon:"\uE599"`                              // worm
+	Knockout    *knockout    `icon:"\uF0CB"`                              // list-ol
+	Recording   *recording   `icon:"\uF03D"`                              // video
 }
 
 func LoadConfig(file *os.File) (*Config, error) {
@@ -95,7 +94,7 @@ func LoadConfig(file *os.File) (*Config, error) {
 func NewConfigFile() *Config {
 	return &Config{
 		General:     initGeneral(),
-		ApiV2:       initApiV2(),
+		ApiV2:       ApiV2,
 		Graphics:    initGraphics(),
 		Audio:       initAudio(),
 		Input:       initInput(),
@@ -108,10 +107,6 @@ func NewConfigFile() *Config {
 		Knockout:    initKnockout(),
 		Recording:   initRecording(),
 	}
-}
-
-func initApiV2() *apiV2 {
-	return &apiV2{5, "FGc9GAtyHzeQDshWP5Ah7dega8hJACAJpQtw6OXk", "Guest", ""}
 }
 
 func (config *Config) migrateCursorDance() {
@@ -185,14 +180,13 @@ func (config *Config) attachToGlobals() {
 	CursorDance = config.CursorDance
 	Knockout = config.Knockout
 	Recording = config.Recording
-	ApiV2 = config.ApiV2
 }
 
 func (config *Config) GetCombined() *CombinedConfig {
 	return &CombinedConfig{
 		Credentials: Credentails,
+		ApiV2:       ApiV2,
 		General:     config.General,
-		ApiV2:       config.ApiV2,
 		Graphics:    config.Graphics,
 		Audio:       config.Audio,
 		Input:       config.Input,
@@ -201,7 +195,6 @@ func (config *Config) GetCombined() *CombinedConfig {
 		Cursor:      config.Cursor,
 		Objects:     config.Objects,
 		Playfield:   config.Playfield,
-		Dance:       config.Dance,
 		CursorDance: config.CursorDance,
 		Knockout:    config.Knockout,
 		Recording:   config.Recording,
