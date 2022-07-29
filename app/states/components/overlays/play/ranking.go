@@ -181,7 +181,7 @@ func NewRankingPanel(cursor *graphics.Cursor, ruleset *osu.OsuRuleSet, hitError 
 		scoreTime = scoreTime.Local()
 	}
 
-	panel.playedBy = fmt.Sprintf("Played by %s on %s", panel.cursor.Name, scoreTime.Format("2006-01-02 15:04:05"))
+	panel.playedBy = fmt.Sprintf("Played by nameless?")
 
 	panel.score = fmt.Sprintf("%08d", score.Score)
 	panel.maxCombo = fmt.Sprintf("%dx", score.Combo)

@@ -35,6 +35,8 @@ type ScoreboardEntry struct {
 	rankHumanized  string
 	avatar         *sprite.Sprite
 	showAvatar     bool
+	times          []float64
+	names          []string
 }
 
 func NewScoreboardEntry(name string, score int64, combo int64, rank int, isPlayer bool) *ScoreboardEntry {
@@ -72,6 +74,11 @@ func NewScoreboardEntry(name string, score int64, combo int64, rank int, isPlaye
 	fnt.Overlap = 0
 
 	entry.UpdateData()
+	entry.times = []float64{30000, 71100, 93300, 115000, 136000, 173000, 189000, 211000, 253000, 275000, 295000,
+		317000, 338000, 362400, 376560, 395700, 419579, 99999999}
+	entry.names = []string{"Wukeduo", "A carrot", "toxicantmmc", "Mimosa M", "ackber", "kukupa", "PercyDan",
+		"SpaceSkyNet", "YuKiRoKi", "Sylvester1", "astralcynsm", "-Spring Night-", "a shit player", "Untitled1",
+		"-[Yuzi Mo]-", "ThickDust", "Ydawu awsl", "???"}
 
 	return entry
 }
@@ -135,6 +142,13 @@ func (entry *ScoreboardEntry) Draw(time float64, batch *batch.QuadBatch, alpha f
 		entry.avatar.SetPosition(entryPos.SubS(26*scale*posScale, 0))
 		entry.avatar.Draw(time, batch)
 		batch.SetSubScale(1, 1)
+	}
+
+	for i, num := range entry.times {
+		if time < num {
+			entry.ChangeName(entry.names[i])
+			break
+		}
 	}
 
 	fnt := skin.GetFont("scoreentry")
@@ -256,6 +270,15 @@ func (entry *ScoreboardEntry) LoadAvatarUser(user string) {
 
 func (entry *ScoreboardEntry) IsAvatarLoaded() bool {
 	return entry.avatar != nil
+}
+
+func (entry *ScoreboardEntry) ChangeName(value string) {
+	if value == entry.name {
+		return
+	}
+	entry.name = value
+	entry.avatar = nil
+	entry.LoadAvatarUser(value)
 }
 
 func (entry *ScoreboardEntry) ShowAvatar(value bool) {
