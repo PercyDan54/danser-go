@@ -9,7 +9,6 @@ import (
 	"github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -768,16 +767,10 @@ func (editor *settingsEditor) buildString(jsonPath string, f reflect.Value, d re
 				imgui.TableNextColumn()
 
 				if imgui.Button("Browse" + jsonPath) {
-					dir := filepath.Join(env.DataDir(), base)
+					dir := getAbsPath(base)
 
-					if strings.TrimSpace(base) != "" {
-						if filepath.IsAbs(base) {
-							dir = base
-						}
-
-						if okF {
-							dir = filepath.Dir(dir)
-						}
+					if strings.TrimSpace(base) != "" && okF {
+						dir = filepath.Dir(dir)
 					}
 
 					if _, err := os.Lstat(dir); err != nil {
@@ -795,15 +788,11 @@ func (editor *settingsEditor) buildString(jsonPath string, f reflect.Value, d re
 					}
 
 					if err == nil {
-						log.Println(p)
-						log.Println(env.DataDir())
 						oD := strings.TrimSuffix(strings.ReplaceAll(base, "\\", "/"), "/")
 						nD := strings.TrimSuffix(strings.ReplaceAll(p, "\\", "/"), "/")
 
-						dD := strings.TrimSuffix(strings.ReplaceAll(env.DataDir(), "\\", "/"), "/") + "/"
-
 						if nD != oD {
-							f.SetString(strings.ReplaceAll(strings.TrimPrefix(nD, dD), "/", string(os.PathSeparator)))
+							f.SetString(getRelativeOrABSPath(p))
 						}
 					}
 				}
@@ -1111,7 +1100,7 @@ func (editor *settingsEditor) drawComponent(jsonPath, label string, long, checkb
 
 	contentAvail := imgui.ContentRegionAvail().X
 
-	if imgui.BeginTableV("lbl"+jsonPath, cCount, imgui.TableFlagsSizingStretchProp|imgui.TableFlagsNoPadInnerX|imgui.TableFlagsNoPadOuterX, vec2(contentAvail, 0), contentAvail) {
+	if imgui.BeginTableV("lbl"+jsonPath, cCount, imgui.TableFlagsSizingStretchProp|imgui.TableFlagsNoPadInnerX|imgui.TableFlagsNoPadOuterX|imgui.TableFlagsNoClip, vec2(contentAvail, 0), contentAvail) {
 		if !long {
 			imgui.TableSetupColumnV("lbl1"+jsonPath, imgui.TableColumnFlagsWidthFixed, contentAvail-width, uint(0))
 			imgui.TableSetupColumnV("lbl2"+jsonPath, imgui.TableColumnFlagsWidthFixed, width, uint(1))
