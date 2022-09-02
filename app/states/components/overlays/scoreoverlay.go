@@ -126,6 +126,7 @@ type ScoreOverlay struct {
 	hitCounts   *play.HitDisplay
 	ppDisplay   *play.PPDisplay
 	strainGraph *play.StrainGraph
+	kpsCounter  *play.KpsCounter
 
 	underlay *sprite.Sprite
 	failed   bool
@@ -275,6 +276,8 @@ func NewScoreOverlay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor) *ScoreOve
 
 	overlay.hitCounts = play.NewHitDisplay(overlay.ruleset, overlay.cursor)
 
+	overlay.kpsCounter = play.NewKpsCounter()
+
 	overlay.shapeRenderer = shape.NewRenderer()
 
 	overlay.boundaries = common.NewBoundaries()
@@ -350,6 +353,7 @@ func (overlay *ScoreOverlay) hitReceived(c *graphics.Cursor, time int64, number 
 		endPos := object.GetStackedStartPositionMod(overlay.ruleset.GetBeatMap().Diff.Mods)
 
 		overlay.aimErrorMeter.Add(float64(time), c.Position, startPos, &endPos)
+		overlay.kpsCounter.Add(time)
 	}
 
 	if result == osu.PositionalMiss {
@@ -498,6 +502,7 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 	overlay.scoreGlider.Update(time)
 	overlay.accuracyGlider.Update(time)
 	overlay.ppDisplay.Update(time)
+	overlay.kpsCounter.Update(time)
 	overlay.hitCounts.Update(time)
 
 	var currentStates [4]bool
@@ -662,6 +667,7 @@ func (overlay *ScoreOverlay) DrawHUD(batch *batch.QuadBatch, _ []color2.Color, a
 	overlay.ppDisplay.Draw(batch, alpha)
 	overlay.strainGraph.Draw(batch, alpha)
 	overlay.hitCounts.Draw(batch, alpha)
+	overlay.kpsCounter.Draw(batch, alpha)
 
 	if overlay.panel != nil {
 		settings.Playfield.Bloom.Enabled = false

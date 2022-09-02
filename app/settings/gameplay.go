@@ -126,6 +126,23 @@ func initGameplay() *gameplay {
 			Show300:          false,
 			ShowSliderBreaks: false,
 		},
+		KpsCounter: &kpsCounter{
+			hudElementPosition: &hudElementPosition{
+				hudElement: &hudElement{
+					Show:    true,
+					Scale:   0.8,
+					Opacity: 1.0,
+				},
+				XPosition: 15,
+				YPosition: 230,
+			},
+			Color: &HSV{
+				Hue:        0,
+				Saturation: 0,
+				Value:      1,
+			},
+			Align: "Left",
+		},
 		StrainGraph: &strainGraph{
 			Show:      true,
 			Opacity:   1,
@@ -225,6 +242,7 @@ type gameplay struct {
 	ComboCounter            *comboCounter
 	PPCounter               *ppCounter
 	HitCounter              *hitCounter
+	KpsCounter              *kpsCounter
 	StrainGraph             *strainGraph
 	KeyOverlay              *hudElementOffset
 	ScoreBoard              *scoreBoard
@@ -333,6 +351,12 @@ type hitCounter struct {
 	Vertical         bool
 	Show300          bool `label:"Show perfect hits"`
 	ShowSliderBreaks bool
+}
+
+type kpsCounter struct {
+	*hudElementPosition
+	Color *HSV   `short:"true"`
+	Align string `combo:"TopLeft,Top,TopRight,Left,Centre,Right,BottomLeft,Bottom,BottomRight"`
 }
 
 type scoreBoard struct {
