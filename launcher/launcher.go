@@ -184,6 +184,10 @@ type launcher struct {
 
 	lastReplayDir   string
 	lastKnockoutDir string
+
+	knockoutManager *knockoutManagerPopup
+
+	currentEditor *settingsEditor
 }
 
 func StartLauncher() {
@@ -221,7 +225,8 @@ func StartLauncher() {
 	settings.Playfield.Background.Triangles.Enabled = true
 	settings.Playfield.Background.Triangles.DrawOverBlur = true
 	settings.Playfield.Background.Blur.Enabled = false
-	settings.Playfield.Background.Parallax.Enabled = false
+	settings.Playfield.Background.Parallax.Enabled = true
+	settings.Playfield.Background.Parallax.Amount = 0.02
 
 	assets.Init(build.Stream == "Dev")
 
@@ -308,10 +313,8 @@ func (l *launcher) startGLFW() {
 
 	l.currentConfig = c
 
-	glfw.WindowHint(glfw.ContextVersionMajor, 3)
-	glfw.WindowHint(glfw.ContextVersionMinor, 3)
-	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
-	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	platform.SetupContext()
+
 	glfw.WindowHint(glfw.Resizable, glfw.False)
 	glfw.WindowHint(glfw.ScaleToMonitor, glfw.True)
 	glfw.WindowHint(glfw.Samples, 4)
@@ -347,9 +350,10 @@ func (l *launcher) startGLFW() {
 
 	log.Println("GLFW initialized!")
 
-	gl.Init()
-
-	extensionCheck()
+	err = platform.GLInit(false)
+	if err != nil {
+		panic("Failed to initialize OpenGL: " + err.Error())
+	}
 
 	glfw.SwapInterval(1)
 
@@ -377,6 +381,12 @@ func (l *launcher) startGLFW() {
 
 		if launcherConfig.CheckForUpdates {
 			checkForUpdates(false)
+		}
+	})
+
+	input.RegisterListener(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		if l.currentEditor != nil {
+			l.currentEditor.updateKey(w, key, scancode, action, mods)
 		}
 	})
 }
@@ -561,7 +571,10 @@ func (l *launcher) Draw() {
 
 	settings.Playfield.Background.Triangles.Speed = l.triangleSpeed.GetValue()
 
-	l.bg.Update(t, 0, 0)
+	pX := (float64(imgui.MousePos().X) * 2 / settings.Graphics.GetWidthF()) - 1
+	pY := (float64(imgui.MousePos().Y) * 2 / settings.Graphics.GetHeightF()) - 1
+
+	l.bg.Update(t, -pX, pY)
 
 	l.batch.SetCamera(mgl32.Ortho(-float32(w)/2, float32(w)/2, float32(h)/2, -float32(h)/2, -1, 1))
 
@@ -613,6 +626,8 @@ func (l *launcher) Draw() {
 
 func (l *launcher) drawImgui() {
 	Begin()
+
+	resetPopupHierarchyInfo()
 
 	lock := l.danserRunning
 
@@ -928,6 +943,7 @@ func (l *launcher) trySelectReplaysFromPaths(p []string) {
 			})
 
 			l.bld.knockoutReplays = finalReplays
+			l.knockoutManager = newKnockoutManagerPopup(l.bld)
 		}
 	}
 }
@@ -990,10 +1006,8 @@ func (l *launcher) newKnockout() {
 
 		imgui.SameLine()
 
-		if imgui.Button("Manage##knockout") {
-			l.openPopup(newPopupF("Manage replays", popBig, func() {
-				drawReplayManager(l.bld)
-			}))
+		if imgui.Button("Manage##knockout") && l.knockoutManager != nil {
+			l.openPopup(l.knockoutManager)
 		}
 	} else {
 		imgui.Text("No replays selected")
@@ -1017,6 +1031,10 @@ func (l *launcher) loadReplay(p string) (*knockoutReplay, error) {
 	replay, err := rplpa.ParseReplay(rData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse replay: %s", err)
+	}
+
+	if replay.PlayMode != 0 {
+		return nil, errors.New("only osu!standard mode is supported")
 	}
 
 	if replay.ReplayData == nil || len(replay.ReplayData) < 2 {
@@ -1362,9 +1380,9 @@ func (l *launcher) drawConfigPanel() {
 		imgui.TableNextColumn()
 
 		if imgui.ButtonV("Edit", vec2(-1, 0)) {
-			sEditor := newSettingsEditor(l.currentConfig)
+			l.currentEditor = newSettingsEditor(l.currentConfig)
 
-			sEditor.setCloseListener(func() {
+			l.currentEditor.setCloseListener(func() {
 				settings.SaveCredentials(false)
 				l.currentConfig.Save("", false)
 
@@ -1373,7 +1391,7 @@ func (l *launcher) drawConfigPanel() {
 				}
 			})
 
-			l.openPopup(sEditor)
+			l.openPopup(l.currentEditor)
 		}
 
 		imgui.EndTable()
@@ -1410,7 +1428,7 @@ func (l *launcher) drawConfigPanel() {
 					imgui.PushItemFlag(imgui.ItemFlagsDisabled, true)
 				}
 
-				if imgui.Button("Save##newclone") {
+				if imgui.Button("Save##newclone") || (!e && (imgui.IsKeyPressed(imgui.KeyEnter) || imgui.IsKeyPressed(imgui.KeyKeypadEnter))) {
 					_, err := os.Stat(filepath.Join(env.ConfigDir(), l.newCloneName+".json"))
 					if err == nil {
 						showMessage(mError, "Config with that name already exists!\nPlease pick a different name")

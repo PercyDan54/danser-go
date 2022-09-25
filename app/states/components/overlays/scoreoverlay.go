@@ -126,8 +126,10 @@ type ScoreOverlay struct {
 	hitCounts   *play.HitDisplay
 	ppDisplay   *play.PPDisplay
 	strainGraph *play.StrainGraph
+	kpsCounter  *play.KpsCounter
 
 	underlay *sprite.Sprite
+	failed   bool
 }
 
 func loadFonts() {
@@ -274,6 +276,8 @@ func NewScoreOverlay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor) *ScoreOve
 
 	overlay.hitCounts = play.NewHitDisplay(overlay.ruleset, overlay.cursor)
 
+	overlay.kpsCounter = play.NewKpsCounter()
+
 	overlay.shapeRenderer = shape.NewRenderer()
 
 	overlay.boundaries = common.NewBoundaries()
@@ -349,6 +353,7 @@ func (overlay *ScoreOverlay) hitReceived(c *graphics.Cursor, time int64, number 
 		endPos := object.GetStackedStartPositionMod(overlay.ruleset.GetBeatMap().Diff.Mods)
 
 		overlay.aimErrorMeter.Add(float64(time), c.Position, startPos, &endPos)
+		overlay.kpsCounter.Add(time)
 	}
 
 	if result == osu.PositionalMiss {
@@ -444,7 +449,7 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 
 	if overlay.panel != nil {
 		overlay.panel.Update(time)
-	} else if settings.Gameplay.ShowResultsScreen && !overlay.created && overlay.audioTime >= overlay.beatmapEnd {
+	} else if !overlay.failed && settings.Gameplay.ShowResultsScreen && !overlay.created && overlay.audioTime >= overlay.beatmapEnd {
 		overlay.created = true
 		cTime := overlay.normalTime
 
@@ -497,9 +502,13 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 	overlay.scoreGlider.Update(time)
 	overlay.accuracyGlider.Update(time)
 	overlay.ppDisplay.Update(time)
+	overlay.kpsCounter.Update(time)
 	overlay.hitCounts.Update(time)
 
-	currentStates := [4]bool{overlay.cursor.LeftKey, overlay.cursor.RightKey, overlay.cursor.LeftMouse && !overlay.cursor.LeftKey, overlay.cursor.RightMouse && !overlay.cursor.RightKey}
+	var currentStates [4]bool
+	if !overlay.failed {
+		currentStates = [4]bool{overlay.cursor.LeftKey, overlay.cursor.RightKey, overlay.cursor.LeftMouse && !overlay.cursor.LeftKey, overlay.cursor.RightMouse && !overlay.cursor.RightKey}
+	}
 
 	for i, state := range currentStates {
 		color := color2.Color{R: 1.0, G: 222.0 / 255, B: 0, A: 0}
@@ -541,6 +550,10 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 }
 
 func (overlay *ScoreOverlay) updateBreaks(time float64) {
+	if overlay.failed {
+		return
+	}
+
 	inBreak := false
 
 	for _, b := range overlay.ruleset.GetBeatMap().Pauses {
@@ -647,13 +660,14 @@ func (overlay *ScoreOverlay) DrawHUD(batch *batch.QuadBatch, _ []color2.Color, a
 		batch.ResetTransform()
 	}
 
-	if settings.Gameplay.ShowWarningArrows {
+	if !overlay.failed && settings.Gameplay.ShowWarningArrows {
 		overlay.arrows.Draw(overlay.audioTime, batch)
 	}
 
 	overlay.ppDisplay.Draw(batch, alpha)
 	overlay.strainGraph.Draw(batch, alpha)
 	overlay.hitCounts.Draw(batch, alpha)
+	overlay.kpsCounter.Draw(batch, alpha)
 
 	if overlay.panel != nil {
 		settings.Playfield.Bloom.Enabled = false
@@ -1003,4 +1017,8 @@ func (overlay *ScoreOverlay) SetBeatmapEnd(end float64) {
 
 func (overlay *ScoreOverlay) ShouldDrawHUDBeforeCursor() bool {
 	return true
+}
+
+func (overlay *ScoreOverlay) Fail(fail bool) {
+	overlay.failed = fail
 }

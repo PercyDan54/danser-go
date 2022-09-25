@@ -126,6 +126,23 @@ func initGameplay() *gameplay {
 			Show300:          false,
 			ShowSliderBreaks: false,
 		},
+		KpsCounter: &kpsCounter{
+			hudElementPosition: &hudElementPosition{
+				hudElement: &hudElement{
+					Show:    true,
+					Scale:   0.8,
+					Opacity: 1.0,
+				},
+				XPosition: 15,
+				YPosition: 230,
+			},
+			Color: &HSV{
+				Hue:        0,
+				Saturation: 0,
+				Value:      1,
+			},
+			Align: "Left",
+		},
 		StrainGraph: &strainGraph{
 			Show:      true,
 			Opacity:   1,
@@ -227,13 +244,14 @@ type gameplay struct {
 	ComboCounter            *comboCounter
 	PPCounter               *ppCounter
 	HitCounter              *hitCounter
+	KpsCounter              *kpsCounter
 	StrainGraph             *strainGraph
 	KeyOverlay              *hudElementOffset
 	ScoreBoard              *scoreBoard
 	Mods                    *mods
 	Boundaries              *boundaries
 	Underlay                *underlay
-	HUDFont                 string `file:"Select HUD font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf"`
+	HUDFont                 string `label:"Overlay (HUD) font" file:"Select HUD font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for PP/UR/hit counts"`
 	ShowResultsScreen       bool
 	ResultsScreenTime       float64 `label:"Results screen duration" min:"1" max:"20" format:"%.1fs"`
 	ResultsUseLocalTimeZone bool    `label:"Show PC's time zone instead of UTC"`
@@ -337,9 +355,15 @@ type hitCounter struct {
 	ShowSliderBreaks bool
 }
 
+type kpsCounter struct {
+	*hudElementPosition
+	Color *HSV   `short:"true"`
+	Align string `combo:"TopLeft,Top,TopRight,Left,Centre,Right,BottomLeft,Bottom,BottomRight"`
+}
+
 type scoreBoard struct {
 	*hudElementOffset
-	AlignRight     bool
+	AlignRight     bool `label:"Align to the right" label:"Simulates the second team of osu! multiplayer"`
 	HideOthers     bool
 	ShowAvatars    bool
 	ExplosionScale float64 `min:"0.1" max:"2" scale:"100" format:"%.0f%%"`
@@ -374,6 +398,6 @@ type strainGraph struct {
 }
 
 type underlay struct {
-	Path       string `file:"Select underlay image" filter:"PNG file (*.png)|png"`
-	AboveHpBar bool
+	Path       string `file:"Select underlay image" filter:"PNG file (*.png)|png" tooltip:"PNG file that will be used as HUD background (similar to custom HP bar backgrounds). It's scaled automatically to fit the screen vertically"`
+	AboveHpBar bool   `label:"Show underlay above HP bar" tooltip:"Use this if HP bar background is large"`
 }
