@@ -474,7 +474,7 @@ func NewPlayer(beatMap *beatmap.BeatMap) *Player {
 
 	player.profilerU = frame.NewCounter()
 
-	player.baseLimit = 2000
+	player.baseLimit = 1000
 
 	player.updateLimiter = frame.NewLimiter(player.baseLimit)
 
@@ -527,7 +527,12 @@ func NewPlayer(beatMap *beatmap.BeatMap) *Player {
 				platformOffset = windowsOffset
 			}
 
-			player.progressMsF = player.rawPositionF + (platformOffset+float64(settings.Audio.Offset)+float64(settings.LOCALOFFSET))*speed
+			oldOffset := 0.0
+			if player.bMap.Version < 5 {
+				oldOffset = -24
+			}
+
+			player.progressMsF = player.rawPositionF + (platformOffset+float64(settings.Audio.Offset)+float64(settings.LOCALOFFSET))*speed + oldOffset
 
 			player.updateMain(delta)
 
@@ -602,7 +607,12 @@ func (player *Player) Update(delta float64) bool {
 
 	player.rawPositionF += delta * speed
 
-	player.progressMsF = player.rawPositionF + float64(settings.LOCALOFFSET)*speed
+	oldOffset := 0.0
+	if player.bMap.Version < 5 {
+		oldOffset = -24
+	}
+
+	player.progressMsF = player.rawPositionF + float64(settings.LOCALOFFSET)*speed + oldOffset
 
 	player.updateMain(delta)
 
@@ -686,7 +696,7 @@ func (player *Player) updateMain(delta float64) {
 			if player.nightcore != nil {
 				player.nightcore.Update(player.progressMsF)
 			}
-		} else {
+		} else if settings.Gameplay.ShowResultsScreen {
 			if player.overlay != nil {
 				player.overlay.DisableAudioSubmission(true)
 			}

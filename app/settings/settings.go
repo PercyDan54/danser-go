@@ -22,7 +22,7 @@ type Config struct {
 	srcData []byte
 
 	General     *general     `icon:"\uF0AD"` // wrench
-	ApiV2       *apiV2       `icon:"\uF084"`
+	ApiV2       *apiV2       `icon:"\uF0AD"`
 	Graphics    *graphics    `icon:"\uE163"` // display
 	Audio       *audio       `icon:"\uF028"` // volume-high
 	Input       *input       `icon:"\uF11C"` // keyboard
@@ -40,18 +40,18 @@ type Config struct {
 type CombinedConfig struct {
 	Credentials *credentials `icon:"\uF084" label:"Credentials (Global)"` // key
 	ApiV2       *apiV2       `icon:"\uF084"`
-	General     *general     `icon:"\uF0AD"`                              // wrench
-	Graphics    *graphics    `icon:"\uE163"`                              // display
-	Audio       *audio       `icon:"\uF028"`                              // volume-high
-	Input       *input       `icon:"\uF11C"`                              // keyboard
-	Gameplay    *gameplay    `icon:"\uF192"`                              // circle-dot
-	Skin        *skin        `icon:"\uF1FC"`                              // paintbrush
-	Cursor      *cursor      `icon:"\uF245"`                              // arrow-pointer
-	Objects     *objects     `icon:"\uF1E0"`                              // share-nodes
-	Playfield   *playfield   `icon:"\uF43C"`                              // chess-board
-	CursorDance *cursorDance `icon:"\uE599"`                              // worm
-	Knockout    *knockout    `icon:"\uF0CB"`                              // list-ol
-	Recording   *recording   `icon:"\uF03D"`                              // video
+	General     *general     `icon:"\uF0AD"` // wrench
+	Graphics    *graphics    `icon:"\uE163"` // display
+	Audio       *audio       `icon:"\uF028"` // volume-high
+	Input       *input       `icon:"\uF11C"` // keyboard
+	Gameplay    *gameplay    `icon:"\uF192"` // circle-dot
+	Skin        *skin        `icon:"\uF1FC"` // paintbrush
+	Cursor      *cursor      `icon:"\uF245"` // arrow-pointer
+	Objects     *objects     `icon:"\uF1E0"` // share-nodes
+	Playfield   *playfield   `icon:"\uF43C"` // chess-board
+	CursorDance *cursorDance `icon:"\uE599"` // worm
+	Knockout    *knockout    `icon:"\uF0CB"` // list-ol
+	Recording   *recording   `icon:"\uF03D"` // video
 }
 
 func LoadConfig(file *os.File) (*Config, error) {
@@ -81,6 +81,7 @@ func LoadConfig(file *os.File) (*Config, error) {
 	}
 
 	config.migrateCursorDance()
+	config.migrateHitCounterColors()
 
 	if config.General.OsuReplaysDir == "" { // Set the replay directory if it hasn't been loaded
 		config.General.OsuReplaysDir = filepath.Join(filepath.Dir(config.General.OsuSongsDir), "Replays")
@@ -176,6 +177,37 @@ func (config *Config) migrateCursorDance() {
 	}
 
 	config.Dance = nil
+}
+
+func (config *Config) migrateHitCounterColors() {
+	if config.Gameplay.HitCounter.Color == nil {
+		return
+	}
+
+	idx := 0
+
+	ln := len(config.Gameplay.HitCounter.Color)
+
+	if config.Gameplay.HitCounter.Show300 {
+		config.Gameplay.HitCounter.Color300 = config.Gameplay.HitCounter.Color[idx%ln]
+		idx++
+	}
+
+	config.Gameplay.HitCounter.Color100 = config.Gameplay.HitCounter.Color[idx%ln]
+	idx++
+
+	config.Gameplay.HitCounter.Color50 = config.Gameplay.HitCounter.Color[idx%ln]
+	idx++
+
+	config.Gameplay.HitCounter.ColorMiss = config.Gameplay.HitCounter.Color[idx%ln]
+	idx++
+
+	if config.Gameplay.HitCounter.ShowSliderBreaks {
+		config.Gameplay.HitCounter.ColorSB = config.Gameplay.HitCounter.Color[idx%ln]
+		idx++
+	}
+
+	config.Gameplay.HitCounter.Color = nil
 }
 
 func (config *Config) attachToGlobals() {

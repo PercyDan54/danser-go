@@ -519,28 +519,6 @@ func (l *launcher) loadLatestReplay() {
 	}
 }
 
-func extensionCheck() {
-	extensions := []string{
-		"GL_ARB_clear_texture",
-		"GL_ARB_direct_state_access",
-		"GL_ARB_texture_storage",
-		"GL_ARB_vertex_attrib_binding",
-		"GL_ARB_buffer_storage",
-	}
-
-	var notSupported []string
-
-	for _, ext := range extensions {
-		if !glfw.ExtensionSupported(ext) {
-			notSupported = append(notSupported, ext)
-		}
-	}
-
-	if len(notSupported) > 0 {
-		panic(fmt.Sprintf("Your GPU does not support one or more required OpenGL extensions: %s. Please update your graphics drivers or upgrade your GPU", notSupported))
-	}
-}
-
 func (l *launcher) Draw() {
 	w, h := l.win.GetFramebufferSize()
 	viewport.Push(w, h)
@@ -1241,6 +1219,10 @@ func (l *launcher) drawLowerPanel() {
 }
 
 func (l *launcher) drawConfigPanel() {
+	if l.currentEditor != nil {
+		l.currentEditor.setDanserRunning(l.danserRunning && l.bld.currentPMode == Watch)
+	}
+
 	w := imgui.WindowContentRegionMax().X
 
 	imgui.SetCursorPos(vec2(imgui.WindowContentRegionMax().X-float32(w)/2.5, 20))
@@ -1379,19 +1361,18 @@ func (l *launcher) drawConfigPanel() {
 
 		imgui.TableNextColumn()
 
+		dRun := l.danserRunning && l.bld.currentPMode == Watch
+
+		if dRun {
+			imgui.PushItemFlag(imgui.ItemFlagsDisabled, false)
+		}
+
 		if imgui.ButtonV("Edit", vec2(-1, 0)) {
-			l.currentEditor = newSettingsEditor(l.currentConfig)
+			l.openCurrentSettingsEditor()
+		}
 
-			l.currentEditor.setCloseListener(func() {
-				settings.SaveCredentials(false)
-				l.currentConfig.Save("", false)
-
-				if !compareDirs(l.currentConfig.General.OsuSongsDir, settings.General.OsuSongsDir) {
-					showMessage(mInfo, "This config has different osu! Songs directory.\nRestart the launcher to see updated maps")
-				}
-			})
-
-			l.openPopup(l.currentEditor)
+		if dRun {
+			imgui.PopItemFlag()
 		}
 
 		imgui.EndTable()
@@ -1456,6 +1437,25 @@ func (l *launcher) drawConfigPanel() {
 			}
 		})
 	}
+}
+
+func (l *launcher) openCurrentSettingsEditor() {
+	saveFunc := func() {
+		settings.SaveCredentials(false)
+		l.currentConfig.Save("", false)
+
+		if !compareDirs(l.currentConfig.General.OsuSongsDir, settings.General.OsuSongsDir) {
+			showMessage(mInfo, "This config has different osu! Songs directory.\nRestart the launcher to see updated maps")
+		}
+	}
+
+	l.currentEditor = newSettingsEditor(l.currentConfig)
+
+	l.currentEditor.setDanserRunning(l.danserRunning)
+	l.currentEditor.setCloseListener(saveFunc)
+	l.currentEditor.setSaveListener(saveFunc)
+
+	l.openPopup(l.currentEditor)
 }
 
 func (l *launcher) tryCreateDefaultConfig() {
@@ -1579,7 +1579,7 @@ func (l *launcher) startDanser() {
 	dExec := os.Args[0]
 
 	if build.Stream == "Release" {
-		dExec = filepath.Join(env.LibDir(), "danser")
+		dExec = filepath.Join(env.LibDir(), build.DanserExec)
 	}
 
 	l.danserCmd = exec.Command(dExec, l.bld.getArguments()...)
@@ -1621,6 +1621,15 @@ func (l *launcher) startDanser() {
 
 		for sc.Scan() {
 			line := sc.Text()
+
+			if strings.Contains(line, "Launcher: Open settings") {
+				if l.currentEditor == nil || !l.currentEditor.opened {
+					l.openCurrentSettingsEditor()
+				}
+
+				l.win.Restore()
+				l.win.Focus()
+			}
 
 			if strings.Contains(line, "panic:") {
 				panicMessage = line[strings.Index(line, "panic:"):]
