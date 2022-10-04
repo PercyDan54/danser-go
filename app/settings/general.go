@@ -2,21 +2,13 @@ package settings
 
 import (
 	"github.com/wieku/danser-go/framework/env"
-	"os"
 	"path/filepath"
-	"runtime"
 )
 
 var General = initGeneral()
 
 func initGeneral() *general {
-	osuBaseDir := ""
-	if runtime.GOOS == "windows" {
-		osuBaseDir = filepath.Join(os.Getenv("localappdata"), "osu!")
-	} else {
-		dir, _ := os.UserHomeDir()
-		osuBaseDir = filepath.Join(dir, ".osu")
-	}
+	osuBaseDir := getOsuInstallation()
 
 	return &general{
 		OsuSongsDir:       filepath.Join(osuBaseDir, "Songs"),
