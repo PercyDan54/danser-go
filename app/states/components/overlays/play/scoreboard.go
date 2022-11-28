@@ -168,17 +168,18 @@ func testAPI() (string, error) {
 func getAccessToken() (string, error) {
 	c := &http.Client{}
 	body := map[string]any{
+		"grant_type":    "password",
 		"client_id":     settings.ApiV2.ClientId,
 		"client_secret": settings.ApiV2.ClientSecret,
-		"grant_type":    "password",
+		"scope":         "*",
 		"username":      settings.ApiV2.Username,
 		"password":      settings.ApiV2.Password,
-		"scope":         "*",
 	}
 	bodyByte, _ := json.Marshal(body)
 	req, err := http.NewRequest("POST", "https://osu.ppy.sh/oauth/token", bytes.NewReader(bodyByte))
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("User-Agent", "osu!")
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -206,8 +207,8 @@ func getScoresApiV2(beatmapID string) ([]*Score, error) {
 		for n, modPart := range mods {
 			modsSl[n/2] += string(modPart)
 		}
-		for i := 0; i < len(modsSl); i++ {
-			str += "&mods[]=" + modsSl[i]
+		for _, mod := range modsSl {
+			str += "&mods[]=" + mod
 		}
 	}
 
@@ -218,6 +219,7 @@ func getScoresApiV2(beatmapID string) ([]*Score, error) {
 
 	token, err := getAccessToken()
 	if err != nil {
+		log.Println("Can't get API V2 token:", err)
 		return nil, err
 	}
 	req.Header.Add("Authorization", "Bearer "+token)

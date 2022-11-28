@@ -396,8 +396,8 @@ type scoreBoard struct {
 	ShowAvatars    bool
 	ExplosionScale float64 `min:"0.1" max:"2" scale:"100" format:"%.0f%%"`
 	ApiV2          bool
-	Mods      string
-	ApiV2Type string
+	ApiV2Type      string `combo:"global,country,friend"`
+	Mods           string
 }
 
 type mods struct {
