@@ -3,13 +3,13 @@
 /replays/
 /videos/
 /settings/
+/ffmpeg/
 settings.json
 settings-*
 *.db
 danser
 danser-launcher
-*.exe
-*.dll
+danser*.exe
 danser*.zip
 danser.log
 launcher.log
@@ -18,3 +18,5 @@ danser-core.*
 libdanser*
 api.txt
 *.osr
+*.exe
+*.dll

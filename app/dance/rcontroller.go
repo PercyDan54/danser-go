@@ -353,6 +353,7 @@ func (controller *ReplayController) InitCursors() {
 			cursor.ScoreID = controller.replays[i].scoreID
 			cursor.ScoreTime = controller.replays[i].ScoreTime
 			cursor.OldSpinnerScoring = controller.controllers[i].oldSpinners
+			cursor.IsReplay = true
 
 			cursor.Update(0)
 			c.replayTime += c.frames[0].Time
