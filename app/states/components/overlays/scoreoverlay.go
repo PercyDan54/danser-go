@@ -127,6 +127,7 @@ type ScoreOverlay struct {
 	ppDisplay   *play.PPDisplay
 	strainGraph *play.StrainGraph
 	kpsCounter  *play.KpsCounter
+	beatSyncAnimation *play.BeatSyncAnimation
 
 	underlay *sprite.Sprite
 	failed   bool
@@ -277,6 +278,7 @@ func NewScoreOverlay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor) *ScoreOve
 	overlay.hitCounts = play.NewHitDisplay(overlay.ruleset, overlay.cursor)
 
 	overlay.kpsCounter = play.NewKpsCounter()
+	overlay.beatSyncAnimation = play.NewBeatSyncAnimation(overlay.ruleset.GetBeatMap())
 
 	overlay.shapeRenderer = shape.NewRenderer()
 
@@ -353,7 +355,6 @@ func (overlay *ScoreOverlay) hitReceived(c *graphics.Cursor, time int64, number 
 		endPos := object.GetStackedStartPositionMod(overlay.ruleset.GetBeatMap().Diff.Mods)
 
 		overlay.aimErrorMeter.Add(float64(time), c.Position, startPos, &endPos)
-		overlay.kpsCounter.Add(time)
 	}
 
 	if result == osu.PositionalMiss {
@@ -439,6 +440,7 @@ func (overlay *ScoreOverlay) Update(time float64) {
 	overlay.rankFront.Update(overlay.audioTime)
 	overlay.arrows.Update(overlay.audioTime)
 	overlay.strainGraph.Update(overlay.audioTime)
+	overlay.beatSyncAnimation.Update(overlay.audioTime)
 
 	//normal timing
 	overlay.updateNormal(overlay.normalTime)
@@ -502,8 +504,8 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 	overlay.scoreGlider.Update(time)
 	overlay.accuracyGlider.Update(time)
 	overlay.ppDisplay.Update(time)
-	overlay.kpsCounter.Update(time)
 	overlay.hitCounts.Update(time)
+	overlay.kpsCounter.Update(time)
 
 	var currentStates [4]bool
 	if !overlay.failed {
@@ -528,6 +530,7 @@ func (overlay *ScoreOverlay) updateNormal(time float64) {
 			if overlay.isDrain() {
 				overlay.keyCounters[i]++
 			}
+			overlay.kpsCounter.Add(time)
 		}
 
 		if overlay.keyStates[i] && !state {
@@ -668,6 +671,7 @@ func (overlay *ScoreOverlay) DrawHUD(batch *batch.QuadBatch, _ []color2.Color, a
 	overlay.strainGraph.Draw(batch, alpha)
 	overlay.hitCounts.Draw(batch, alpha)
 	overlay.kpsCounter.Draw(batch, alpha)
+	overlay.beatSyncAnimation.Draw(batch, alpha)
 
 	if overlay.panel != nil {
 		settings.Playfield.Bloom.Enabled = false

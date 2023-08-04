@@ -247,6 +247,18 @@ func initGameplay() *gameplay {
 			Path:       "",
 			AboveHpBar: false,
 		},
+		BeatSyncAnimation: &beatSyncAnimation{
+			hudElementPosition: &hudElementPosition{
+				hudElement: &hudElement{
+					Show:    true,
+					Scale:   1.0,
+					Opacity: 1.0,
+				},
+				XPosition: 1350,
+				YPosition: 450,
+			},
+			Speed: 1,
+		},
 		HUDFont:                 "",
 		ShowResultsScreen:       true,
 		ResultsScreenTime:       5,
@@ -275,6 +287,7 @@ type gameplay struct {
 	Mods                    *mods
 	Boundaries              *boundaries
 	Underlay                *underlay
+	BeatSyncAnimation       *beatSyncAnimation
 	HUDFont                 string  `label:"Overlay (HUD) font" file:"Select HUD font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for PP/UR/hit counts" liveedit:"false"`
 	ShowResultsScreen       bool    `liveedit:"false"`
 	ResultsScreenTime       float64 `label:"Results screen duration" min:"1" max:"20" format:"%.1fs" liveedit:"false"`
@@ -439,4 +452,9 @@ type outline struct {
 type underlay struct {
 	Path       string `file:"Select underlay image" filter:"PNG file (*.png)|png" tooltip:"PNG file that will be used as HUD background (similar to custom HP bar backgrounds). It's scaled automatically to fit the screen vertically" liveedit:"false"`
 	AboveHpBar bool   `label:"Show underlay above HP bar" tooltip:"Use this if HP bar background is large"`
+}
+
+type beatSyncAnimation struct {
+	*hudElementPosition
+	Speed float64
 }

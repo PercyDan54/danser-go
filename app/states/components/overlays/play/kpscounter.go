@@ -20,23 +20,22 @@ func NewKpsCounter() *KpsCounter {
 	return &KpsCounter{
 		font:  font.GetFont("HUDFont"),
 		text:  "0 kps",
-		value: 0,
+		value: 0
 	}
 }
 
-func (kpsCounter *KpsCounter) Add(time int64) {
-	kpsCounter.hits = append(kpsCounter.hits, float64(time))
+func (kpsCounter *KpsCounter) Add(time float64) {
+	kpsCounter.hits = append(kpsCounter.hits, time)
 }
 
 func (kpsCounter *KpsCounter) Update(time float64) {
 	var newHits []float64
 	for _, hit := range kpsCounter.hits {
-		window := 1000 * settings.SPEED
-		relativeTime := time*settings.SPEED - hit
+		window := 1000.0
+		relativeTime := time - hit
 		if relativeTime <= window {
 			newHits = append(newHits, hit)
 		}
-
 	}
 	kpsCounter.hits = newHits
 	kpsCounter.value = len(newHits)
@@ -55,7 +54,7 @@ func (kpsCounter *KpsCounter) Draw(batch *batch.QuadBatch, alpha float64) {
 	scale := settings.Gameplay.KpsCounter.Scale
 	position := vector.NewVec2d(settings.Gameplay.KpsCounter.XPosition, settings.Gameplay.KpsCounter.YPosition)
 	origin := vector.ParseOrigin(settings.Gameplay.KpsCounter.Align)
-	cS := settings.Gameplay.PPCounter.Color
+	cS := settings.Gameplay.KpsCounter.Color
 
 	color := color2.NewHSVA(float32(cS.Hue), float32(cS.Saturation), float32(cS.Value), float32(kpsAlpha))
 	kpsCounter.draw(batch, kpsCounter.text, position, 0, scale, color, origin)

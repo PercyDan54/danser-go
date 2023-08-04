@@ -58,3 +58,23 @@ func (animation *Animation) Draw(time float64, batch *batch.QuadBatch) {
 
 	animation.Sprite.Draw(time, batch)
 }
+
+func (animation *Animation) GetTextureCount() int {
+	return len(animation.textures)
+}
+
+func (animation *Animation) GetFrameDelay() float64 {
+	return animation.frameDelay
+}
+
+func (animation *Animation) SetFrameDelay(frameDelay float64) {
+	animation.frameDelay = frameDelay
+}
+
+func (animation *Animation) GetFrame() int {
+	return animation.currentFrame
+}
+
+func (animation *Animation) SetFrame(frame int) {
+	animation.currentFrame = frame
+}
