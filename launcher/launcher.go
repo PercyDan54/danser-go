@@ -196,6 +196,8 @@ type launcher struct {
 	recordSnowPos vector.Vector2f
 
 	snow *drawables.Snow
+
+	timeMenu *timePopup
 }
 
 func StartLauncher() {
@@ -221,14 +223,7 @@ func StartLauncher() {
 		christmas:  cTime.Month() == 12 && cTime.Day() >= 6,
 	}
 
-	file, err := os.Create(filepath.Join(env.DataDir(), "launcher.log"))
-	if err != nil {
-		panic(err)
-	}
-
-	log.SetOutput(io.MultiWriter(os.Stdout, file))
-
-	log.Println("danser-go version:", build.VERSION)
+	platform.StartLogging("launcher")
 
 	loadLauncherConfig()
 
@@ -881,18 +876,18 @@ func (l *launcher) drawControls() {
 		imgui.TableNextColumn()
 
 		if imgui.ButtonV("Time/Offset", vec2(-1, imgui.TextLineHeight()*2)) {
-			timePopup := newPopupF("Set times", popMedium, func() {
-				drawTimeMenu(l.bld)
-			})
+			if l.timeMenu == nil {
+				l.timeMenu = newTimePopup(l.bld)
 
-			timePopup.setCloseListener(func() {
-				if l.bld.currentMap != nil && l.bld.currentMap.LocalOffset != int(l.bld.offset.value) {
-					l.bld.currentMap.LocalOffset = int(l.bld.offset.value)
-					database.UpdateLocalOffset(l.bld.currentMap)
-				}
-			})
+				l.timeMenu.setCloseListener(func() {
+					if l.bld.currentMap != nil && l.bld.currentMap.LocalOffset != int(l.bld.offset.value) {
+						l.bld.currentMap.LocalOffset = int(l.bld.offset.value)
+						database.UpdateLocalOffset(l.bld.currentMap)
+					}
+				})
+			}
 
-			l.openPopup(timePopup)
+			l.openPopup(l.timeMenu)
 		}
 
 		imgui.EndTable()
@@ -906,7 +901,12 @@ func (l *launcher) selectReplay() {
 	imgui.PushFont(Font32)
 
 	if imgui.ButtonV("Select replay", bSize) {
-		p, err := dialog.File().Filter("osu! replay file (*.osr)", "osr").Title("Select replay file").SetStartDir(l.currentConfig.General.GetReplaysDir()).Load()
+		dir := l.currentConfig.General.GetReplaysDir()
+		if _, err := os.Lstat(dir); err != nil {
+			dir = env.DataDir()
+		}
+
+		p, err := dialog.File().Filter("osu! replay file (*.osr)", "osr").Title("Select replay file").SetStartDir(dir).Load()
 		if err == nil {
 			l.trySelectReplayFromPath(p)
 		}
@@ -1030,8 +1030,7 @@ func (l *launcher) newKnockout() {
 	if imgui.ButtonV("Select replays", bSize) {
 		kPath := getAbsPath(launcherConfig.LastKnockoutPath)
 
-		_, err := os.Lstat(kPath)
-		if err != nil {
+		if _, err := os.Lstat(kPath); err != nil {
 			kPath = env.DataDir()
 		}
 
@@ -1612,13 +1611,14 @@ func (l *launcher) createConfigList() {
 			stPath := strings.ReplaceAll(strings.TrimPrefix(strings.TrimSuffix(path, ".json"), env.ConfigDir()+string(os.PathSeparator)), "\\", "/")
 
 			if stPath != "credentials" && stPath != "default" && stPath != "launcher" {
-				log.Println("Config:", stPath)
 				l.configList = append(l.configList, stPath)
 			}
 		}
 
 		return nil
 	})
+
+	log.Println("Available configs:", strings.Join(l.configList, ", "))
 
 	sort.Strings(l.configList)
 
@@ -1732,6 +1732,7 @@ func (l *launcher) startDanser() {
 				l.encodeInProgress = false
 
 				l.recordProgress = 1
+				platform.SetProgress(l.win, 100, 100)
 				l.recordStatus = "Finalizing..."
 				l.recordStatusSpeed = ""
 				l.recordStatusETA = ""
@@ -1771,7 +1772,7 @@ func (l *launcher) startDanser() {
 			}
 		}
 
-		l.recordProgress = 100
+		l.recordProgress = 1
 		l.recordStatus = "Done in " + util.FormatSeconds(int(time.Since(l.encodeStart).Seconds()))
 		l.recordStatusSpeed = ""
 		l.recordStatusETA = ""
