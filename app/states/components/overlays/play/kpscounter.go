@@ -20,7 +20,7 @@ func NewKpsCounter() *KpsCounter {
 	return &KpsCounter{
 		font:  font.GetFont("HUDFont"),
 		text:  "0 kps",
-		value: 0
+		value: 0,
 	}
 }
 

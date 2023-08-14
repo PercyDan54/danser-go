@@ -41,7 +41,7 @@ func initCursor() *cursor {
 		GlowEndScale:                0.4,
 		InnerLengthMult:             0.9,
 		AdditiveBlending:            true,
-		CursorRipples:               true,
+		CursorRipples:               false,
 		SmokeEnabled:                true,
 		KnockoutSmokeEnabled:        true,
 	}

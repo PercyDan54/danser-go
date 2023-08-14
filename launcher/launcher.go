@@ -1,29 +1,8 @@
 package launcher
 
-/*
-#ifdef _WIN32
-
-#include <windows.h>
-#include <winuser.h>
-
-void beep_custom() {
-	MessageBeep(0x00000000L);
-}
-void beep_error() {
-	MessageBeep(0x00000030L);
-}
-
-#else
-
-void beep_custom() {}
-
-void beep_error() {}
-
-#endif
-*/
-import "C"
 import (
 	"bufio"
+	"cmp"
 	"errors"
 	"fmt"
 	"github.com/faiface/mainthread"
@@ -51,19 +30,18 @@ import (
 	"github.com/wieku/danser-go/framework/math/animation"
 	"github.com/wieku/danser-go/framework/math/animation/easing"
 	color2 "github.com/wieku/danser-go/framework/math/color"
-	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
 	"github.com/wieku/danser-go/framework/platform"
 	"github.com/wieku/danser-go/framework/qpc"
 	"github.com/wieku/danser-go/framework/util"
 	"github.com/wieku/rplpa"
-	"golang.org/x/exp/slices"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -476,8 +454,8 @@ func (l *launcher) loadBeatmaps() {
 			}
 		})
 
-		slices.SortFunc(beatmaps, func(a, b *beatmap.BeatMap) bool {
-			return strings.ToLower(a.Name) < strings.ToLower(b.Name)
+		slices.SortFunc(beatmaps, func(a, b *beatmap.BeatMap) int {
+			return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 		})
 
 		bSplash = "Calculating Star Rating...\nThis may take a while...\n\n\n"
@@ -531,8 +509,8 @@ func (l *launcher) loadLatestReplay() {
 		return
 	}
 
-	slices.SortFunc(list, func(a, b *lastModPath) bool {
-		return a.tStamp.After(b.tStamp)
+	slices.SortFunc(list, func(a, b *lastModPath) int {
+		return -a.tStamp.Compare(b.tStamp)
 	})
 
 	// Load the newest that can be used
@@ -997,8 +975,8 @@ func (l *launcher) trySelectReplaysFromPaths(p []string) {
 				}
 			}
 
-			slices.SortFunc(finalReplays, func(a, b *knockoutReplay) bool {
-				return a.parsedReplay.Score > b.parsedReplay.Score
+			slices.SortFunc(finalReplays, func(a, b *knockoutReplay) int {
+				return -cmp.Compare(a.parsedReplay.Score, b.parsedReplay.Score)
 			})
 
 			l.bld.knockoutReplays = finalReplays
@@ -1346,7 +1324,7 @@ func (l *launcher) drawConfigPanel() {
 
 		if imgui.BeginComboV("##config", l.bld.config, imgui.ComboFlagsHeightLarge) {
 			for _, s := range l.configList {
-				mWidth = mutils.Max(mWidth, imgui.CalcTextSize(s, false, 0).X+20)
+				mWidth = max(mWidth, imgui.CalcTextSize(s, false, 0).X+20)
 			}
 
 			imgui.SetNextItemWidth(mWidth)
@@ -1378,7 +1356,7 @@ func (l *launcher) drawConfigPanel() {
 			}
 
 			if len(searchResults) > 0 {
-				sHeight := float32(mutils.Min(8, len(searchResults)))*imgui.FrameHeightWithSpacing() - imgui.CurrentStyle().ItemSpacing().Y/2
+				sHeight := float32(min(8, len(searchResults)))*imgui.FrameHeightWithSpacing() - imgui.CurrentStyle().ItemSpacing().Y/2
 
 				if imgui.BeginListBoxV("##blistbox", vec2(mWidth, sHeight)) {
 					focusScroll = focusScroll || imgui.IsWindowAppearing()
@@ -1799,7 +1777,7 @@ func (l *launcher) startDanser() {
 				platform.ShowFileInManager(resultFile)
 			}
 
-			C.beep_custom()
+			platform.Beep(platform.Ok)
 		}
 
 		rFile.Close()

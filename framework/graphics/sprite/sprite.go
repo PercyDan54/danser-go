@@ -1,15 +1,15 @@
 package sprite
 
 import (
+	"cmp"
 	"github.com/wieku/danser-go/framework/graphics/batch"
 	"github.com/wieku/danser-go/framework/graphics/texture"
 	"github.com/wieku/danser-go/framework/math/animation"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/math32"
-	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"golang.org/x/exp/slices"
 	"math"
+	"slices"
 	"sort"
 )
 
@@ -69,7 +69,7 @@ func (sprite *Sprite) Update(time float64) {
 				n := sort.Search(len(sprite.transforms)-i-1, func(f int) bool {
 					b := sprite.transforms[f+i+1]
 
-					r := mutils.Compare(transform.GetStartTime(), b.GetStartTime())
+					r := cmp.Compare(transform.GetStartTime(), b.GetStartTime())
 					return r == -1 || (r == 0 && transform.GetID() < b.GetID())
 				})
 
@@ -151,9 +151,14 @@ func (sprite *Sprite) AddTransformsUnordered(transformations []*animation.Transf
 }
 
 func (sprite *Sprite) SortTransformations() {
-	slices.SortFunc(sprite.transforms, func(a, b *animation.Transformation) bool {
-		r := mutils.Compare(a.GetStartTime(), b.GetStartTime())
-		return r == -1 || (r == 0 && a.GetID() < b.GetID())
+	slices.SortFunc(sprite.transforms, func(a, b *animation.Transformation) int {
+		r := cmp.Compare(a.GetStartTime(), b.GetStartTime())
+
+		if r != 0 {
+			return r
+		}
+
+		return cmp.Compare(a.GetID(), b.GetID())
 	})
 }
 
@@ -181,8 +186,8 @@ func (sprite *Sprite) AdjustTimesToTransformations() {
 	endTime := -math.MaxFloat64
 
 	for _, t := range sprite.transforms {
-		startTime = math.Min(startTime, t.GetStartTime())
-		endTime = math.Max(endTime, t.GetTotalEndTime())
+		startTime = min(startTime, t.GetStartTime())
+		endTime = max(endTime, t.GetTotalEndTime())
 	}
 
 	sprite.startTime = startTime

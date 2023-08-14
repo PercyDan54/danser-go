@@ -14,7 +14,6 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/sprite"
 	"github.com/wieku/danser-go/framework/math/animation"
 	"github.com/wieku/danser-go/framework/math/animation/easing"
-	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
 	"io/ioutil"
 	"log"
@@ -90,7 +89,7 @@ func NewScoreboard(beatMap *beatmap.BeatMap, omitID int64) *ScoreBoard {
 		sort.SliceStable(scores, func(i, j int) bool {
 			return scores[i].Score > scores[j].Score
 		})
-		for i := 0; i < mutils.Min(len(scores), 50); i++ {
+		for i := 0; i < min(len(scores), 50); i++ {
 			s := scores[i]
 			for i := 0; i < len(scores); i++ {
 				if scores[i].ID == omitID {
@@ -131,7 +130,7 @@ func NewScoreboard(beatMap *beatmap.BeatMap, omitID int64) *ScoreBoard {
 				return scores[i].Score.Score > scores[j].Score.Score
 			})
 		}
-		for i := 0; i < mutils.Min(len(scores), 50); i++ {
+		for i := 0; i < min(len(scores), 50); i++ {
 			s := scores[i]
 
 			entry := NewScoreboardEntry(s.Username, s.Score.Score, int64(s.MaxCombo), i+1, false)
@@ -153,7 +152,7 @@ func testAPI() (string, error) {
 	var err error
 	key := strings.TrimSpace(settings.Credentails.ApiV1Key)
 	if key == "" {
-		log.Println(fmt.Sprintf("Please put your osu!api v1 key into '%s' file", filepath.Join(env.ConfigDir(), "api.txt")))
+		log.Println(fmt.Sprintf("Please put your osu!api v1 key into '%s' file", filepath.Join(env.ConfigDir(), "credentials.json")))
 	} else {
 		client := osuapi.NewClient(key)
 		err = client.Test()
