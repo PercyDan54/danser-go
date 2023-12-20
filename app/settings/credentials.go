@@ -13,11 +13,18 @@ import (
 	"strings"
 )
 
-var Credentails = &credentials{}
+var Credentails = &credentials{
+	ApiV2: &ApiV2{
+		ClientId:     5, // osu!lazer
+		ClientSecret: "FGc9GAtyHzeQDshWP5Ah7dega8hJACAJpQtw6OXk",
+		Username:     "Guest",
+		Password:     "",
+	},
+}
 
 type credentials struct {
 	ApiV1Key string `label:"API V1 Key" long:"true" password:"true" tooltip:"Valid API V1 Key has to be provided to have access to global leaderboards\n\nDON'T SHARE IT WITH OTHERS!!!" hidePath:"true"`
-
+	ApiV2    *ApiV2
 	//Future stuff
 	//ClientId     string
 	//ClientSecret string
@@ -27,6 +34,13 @@ type credentials struct {
 	//AccessToken  string
 	//ExpireDate   time.Time
 	//RefreshToken string
+}
+
+type ApiV2 struct {
+	ClientId     int
+	ClientSecret string
+	Username     string
+	Password     string `password:"true"`
 }
 
 var srcDataCred []byte

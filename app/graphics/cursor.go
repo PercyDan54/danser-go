@@ -239,7 +239,7 @@ func (cursor *Cursor) smokeUpdate() {
 				smoke.SetAdditive(settings.PLAYERS == 1)
 				smoke.SetRotation(rand.Float64() * 2 * math.Pi)
 				smoke.SetScale(0.5 / scaling)
-				smoke.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, cursor.time, cursor.time+(4000 / settings.Cursor.SmokeRemoveSpeed), 0.6, 0.0))
+				smoke.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, cursor.time, cursor.time+(4000/settings.Cursor.SmokeRemoveSpeed), 0.6, 0.0))
 				smoke.ResetValuesToTransforms()
 				smoke.AdjustTimesToTransformations()
 				smoke.ShowForever(false)
@@ -332,7 +332,6 @@ func (cursor *Cursor) DrawM(scale float64, batch *batch.QuadBatch, color color2.
 		batch.Begin()
 		batch.SetAdditive(false)
 		batch.ResetTransform()
-		batch.SetColor(1, 1, 1, float64(color.A))
 		batch.SetScale(scaling*scaling, scaling*scaling)
 		batch.SetSubScale(1, 1)
 

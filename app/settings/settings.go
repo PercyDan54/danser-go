@@ -23,7 +23,6 @@ type Config struct {
 	srcData []byte
 
 	General     *general     `icon:"\uF0AD"` // wrench
-	ApiV2       *apiV2       `icon:"\uF0AD"`
 	Graphics    *graphics    `icon:"\uE163"` // display
 	Audio       *audio       `icon:"\uF028"` // volume-high
 	Input       *input       `icon:"\uF11C"` // keyboard
@@ -40,19 +39,18 @@ type Config struct {
 
 type CombinedConfig struct {
 	Credentials *credentials `icon:"\uF084" label:"Credentials (Global)"` // key
-	ApiV2       *apiV2       `icon:"\uF084"`
-	General     *general     `icon:"\uF0AD"` // wrench
-	Graphics    *graphics    `icon:"\uE163"` // display
-	Audio       *audio       `icon:"\uF028"` // volume-high
-	Input       *input       `icon:"\uF11C"` // keyboard
-	Gameplay    *gameplay    `icon:"\uF192"` // circle-dot
-	Skin        *skin        `icon:"\uF1FC"` // paintbrush
-	Cursor      *cursor      `icon:"\uF245"` // arrow-pointer
-	Objects     *objects     `icon:"\uF1E0"` // share-nodes
-	Playfield   *playfield   `icon:"\uF43C"` // chess-board
-	CursorDance *cursorDance `icon:"\uE599"` // worm
-	Knockout    *knockout    `icon:"\uF0CB"` // list-ol
-	Recording   *recording   `icon:"\uF03D"` // video
+	General     *general     `icon:"\uF0AD"`                              // wrench
+	Graphics    *graphics    `icon:"\uE163"`                              // display
+	Audio       *audio       `icon:"\uF028"`                              // volume-high
+	Input       *input       `icon:"\uF11C"`                              // keyboard
+	Gameplay    *gameplay    `icon:"\uF192"`                              // circle-dot
+	Skin        *skin        `icon:"\uF1FC"`                              // paintbrush
+	Cursor      *cursor      `icon:"\uF245"`                              // arrow-pointer
+	Objects     *objects     `icon:"\uF1E0"`                              // share-nodes
+	Playfield   *playfield   `icon:"\uF43C"`                              // chess-board
+	CursorDance *cursorDance `icon:"\uE599"`                              // worm
+	Knockout    *knockout    `icon:"\uF0CB"`                              // list-ol
+	Recording   *recording   `icon:"\uF03D"`                              // video
 }
 
 func LoadConfig(file *os.File) (*Config, error) {
@@ -90,7 +88,6 @@ func LoadConfig(file *os.File) (*Config, error) {
 func NewConfigFile() *Config {
 	return &Config{
 		General:     initGeneral(),
-		ApiV2:       ApiV2,
 		Graphics:    initGraphics(),
 		Audio:       initAudio(),
 		Input:       initInput(),
@@ -218,7 +215,6 @@ func (config *Config) migrateBlendWeights() {
 
 func (config *Config) attachToGlobals() {
 	General = config.General
-	ApiV2 = config.ApiV2
 	Graphics = config.Graphics
 	Audio = config.Audio
 	Input = config.Input
@@ -235,7 +231,6 @@ func (config *Config) attachToGlobals() {
 func (config *Config) GetCombined() *CombinedConfig {
 	return &CombinedConfig{
 		Credentials: Credentails,
-		ApiV2:       ApiV2,
 		General:     config.General,
 		Graphics:    config.Graphics,
 		Audio:       config.Audio,

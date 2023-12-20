@@ -168,11 +168,11 @@ func getAccessToken() (string, error) {
 	c := &http.Client{}
 	body := map[string]any{
 		"grant_type":    "password",
-		"client_id":     settings.ApiV2.ClientId,
-		"client_secret": settings.ApiV2.ClientSecret,
+		"client_id":     settings.Credentails.ApiV2.ClientId,
+		"client_secret": settings.Credentails.ApiV2.ClientSecret,
 		"scope":         "*",
-		"username":      settings.ApiV2.Username,
-		"password":      settings.ApiV2.Password,
+		"username":      settings.Credentails.ApiV2.Username,
+		"password":      settings.Credentails.ApiV2.Password,
 	}
 	bodyByte, _ := json.Marshal(body)
 	req, err := http.NewRequest("POST", "https://osu.ppy.sh/oauth/token", bytes.NewReader(bodyByte))
