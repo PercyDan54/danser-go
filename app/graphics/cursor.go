@@ -1,10 +1,6 @@
 package graphics
 
 import (
-	"math"
-	"math/rand"
-	"time"
-
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/wieku/danser-go/app/bmath/camera"
 	"github.com/wieku/danser-go/app/settings"
@@ -19,6 +15,9 @@ import (
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/vector"
+	"math"
+	"math/rand"
+	"time"
 )
 
 type cursorRenderer interface {
@@ -217,7 +216,7 @@ func (cursor *Cursor) Update(delta float64) {
 }
 
 func (cursor *Cursor) smokeUpdate() {
-	if (!settings.Cursor.SmokeEnabled && settings.PLAYERS == 1) || (!settings.Cursor.KnockoutSmokeEnabled && settings.PLAYERS != 1) {
+	if (!settings.Cursor.SmokeEnabled && settings.PLAYERS == 1) || (!settings.Knockout.SmokeEnabled && settings.PLAYERS != 1) {
 		return
 	}
 
@@ -272,9 +271,9 @@ func (cursor *Cursor) smokeBrighten() {
 	for _, s := range smokes {
 		if (s.GetEndTime() - s.GetStartTime()) < 5000 {
 			s.ClearTransformations()
-			dur := 8000 / settings.Cursor.SmokeRemoveSpeed
-			s.AddTransform(animation.NewSingleTransform(animation.Fade, easing.InQuad, cursor.time+delay, cursor.time+delay+dur, 1.0, 0.0))
-			s.SetEndTime(cursor.time + delay + dur)
+			duration := 8000 / settings.Cursor.SmokeRemoveSpeed
+			s.AddTransform(animation.NewSingleTransform(animation.Fade, easing.InQuad, cursor.time+delay, cursor.time+delay+duration, 1.0, 0.0))
+			s.SetEndTime(cursor.time + delay + duration)
 
 			delay += 2.0
 		}
@@ -332,6 +331,7 @@ func (cursor *Cursor) DrawM(scale float64, batch *batch.QuadBatch, color color2.
 		batch.Begin()
 		batch.SetAdditive(false)
 		batch.ResetTransform()
+		batch.SetColor(1, 1, 1, float64(color.A))
 		batch.SetScale(scaling*scaling, scaling*scaling)
 		batch.SetSubScale(1, 1)
 

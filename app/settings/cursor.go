@@ -43,7 +43,6 @@ func initCursor() *cursor {
 		AdditiveBlending:            true,
 		CursorRipples:               false,
 		SmokeEnabled:                true,
-		KnockoutSmokeEnabled:        true,
 	}
 }
 
@@ -68,13 +67,12 @@ type cursor struct {
 	TrailDensity                float64 `min:"0.001" max:"3"`                 //0.5 - 1/TrailDensity = distance between trail points
 	TrailMaxLength              int64   `max:"10000"`                         //2000 - maximum width (in osu!pixels) of cursortrail
 	TrailRemoveSpeed            float64 `max:"5" format:"%.2fx"`              //1.0 - trail removal multiplier, 0.5 means half the speed
-	SmokeRemoveSpeed            float64 `max:"5" format:"%.2fx"`              //1.0 - smoke removal multiplier, 0.5 means half the speed
 	GlowEndScale                float64 `max:"3" format:"%.2fx"`              //0.4
+	SmokeRemoveSpeed            float64 `max:"5" format:"%.2fx"`              //1.0 - smoke removal multiplier, 0.5 means half the speed
 	InnerLengthMult             float64 `label:"Relative inner trail length"` //0.9 - if glow is enabled, inner trail will be shortened to 0.9 * length
 	AdditiveBlending            bool
 	CursorRipples               bool
 	SmokeEnabled                bool `label:"Cursor Smoke"`
-	KnockoutSmokeEnabled        bool `label:"Cursor Smoke in Knockout"`
 }
 
 func (cr *cursor) GetColors(divides, cursors int, beatScale, alpha float64) []color2.Color {
