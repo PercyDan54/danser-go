@@ -209,7 +209,14 @@ func processLinear(points []vector.Vector2f) (lines []Linear) {
 			continue
 		}
 
-		lines = append(lines, NewLinear(points[i], points[i+1]))
+		rho := points[i+1].Dst(points[i])
+		delta := points[i+1].Sub(points[i])
+		segments := int(rho / 10)
+		for j := 0; j < segments; j++ {
+			start := float32(j / segments)
+			end := float32((j + 1) / segments)
+			lines = append(lines, NewLinear(points[i].Add(delta.Mult(vector.NewVec2f(start, start))), points[i].Add(delta.Mult(vector.NewVec2f(end, end)))))
+		}
 	}
 
 	return

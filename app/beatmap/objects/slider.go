@@ -350,7 +350,7 @@ func (slider *Slider) GetStackedPositionAtModLazer(time float64, modifier diffic
 }
 
 func (slider *Slider) GetAsDummyCircles() []IHitObject {
-	circles := []IHitObject{slider.createDummyCircle(slider.GetStartTime(), true, false)}
+	circles := []IHitObject{slider.startCircle}
 
 	if slider.IsRetarded() {
 		return circles

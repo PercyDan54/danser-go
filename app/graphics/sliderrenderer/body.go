@@ -387,7 +387,21 @@ func (body *Body) DrawBase(headProgress, tailProgress float64, baseProjView mgl3
 	body.fillVAO.Unbind()
 
 	body.capVAO.Bind()
-	body.capVAO.DrawInstanced(0, 2)
+
+	for s, _ := range body.sections {
+		head1 := body.sections[s]
+		tail1 := body.sections[s]
+
+		hPoint1 := head1.pointAtLen(headLength)
+		tPoint1 := tail1.pointAtLen(tailLength)
+
+		body.capBuffer[0], body.capBuffer[1] = hPoint1.X, hPoint1.Y
+		body.capBuffer[2], body.capBuffer[3] = tPoint1.X, tPoint1.Y
+
+		body.capVAO.SetData("points", 0, body.capBuffer)
+		body.capVAO.DrawInstanced(0, 2)
+	}
+
 	body.capVAO.Unbind()
 
 	capShader.Unbind()
