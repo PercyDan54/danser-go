@@ -5,7 +5,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
@@ -16,6 +16,7 @@ import (
 	"github.com/wieku/danser-go/app/graphics"
 	"github.com/wieku/danser-go/app/graphics/gui/drawables"
 	"github.com/wieku/danser-go/app/input"
+	"github.com/wieku/danser-go/app/osuapi"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/app/states/components/common"
 	"github.com/wieku/danser-go/build"
@@ -421,6 +422,11 @@ func (l *launcher) startGLFW() {
 		if launcherConfig.CheckForUpdates {
 			checkForUpdates(false)
 		}
+
+		refreshErr := osuapi.TryRefreshToken()
+		if refreshErr != nil {
+			showMessage(mError, "Failed to refresh token!\nPlease go to Settings->Credentials and click Authorize.\nError: %s", refreshErr.Error())
+		}
 	})
 
 	input.RegisterListener(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
@@ -657,7 +663,7 @@ func (l *launcher) drawImgui() {
 	lock := l.danserRunning
 
 	if lock {
-		imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, true)
+		imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), true)
 	}
 
 	wW, wH := int(settings.Graphics.WindowWidth), int(settings.Graphics.WindowHeight)
@@ -685,14 +691,14 @@ func (l *launcher) drawImgui() {
 	imgui.PopStyleVar()
 
 	if lock {
-		imgui.InternalPopItemFlag()
+		imgui.PopItemFlag()
 	}
 
 	DrawImgui()
 }
 
 func (l *launcher) drawMain() {
-	w := imgui.WindowContentRegionMax().X
+	w := contentRegionMax().X
 
 	imgui.PushFont(Font24)
 
@@ -703,7 +709,7 @@ func (l *launcher) drawMain() {
 		imgui.TableNextColumn()
 
 		imgui.AlignTextToFramePadding()
-		imgui.Text("Mode:")
+		imgui.TextUnformatted("Mode:")
 
 		imgui.TableNextColumn()
 
@@ -718,7 +724,7 @@ func (l *launcher) drawMain() {
 
 					if m != Replay {
 						l.bld.replayPath = ""
-						l.bld.currentReplay = nil
+						l.bld.removeReplay()
 					}
 
 					if m != Knockout {
@@ -780,7 +786,7 @@ func (l *launcher) drawMain() {
 }
 
 func (l *launcher) drawSplash() {
-	w, h := imgui.WindowContentRegionMax().X, imgui.WindowContentRegionMax().Y
+	w, h := contentRegionMax().X, contentRegionMax().Y
 
 	imgui.PushFont(Font48)
 
@@ -801,7 +807,7 @@ func (l *launcher) drawSplash() {
 
 		dHeight += tSize.Y
 
-		imgui.Text(sText)
+		imgui.TextUnformatted(sText)
 	}
 
 	imgui.PopFont()
@@ -820,7 +826,7 @@ func (l *launcher) drawControls() {
 
 	imgui.SetCursorPos(vec2(20, 204+34))
 
-	w := imgui.WindowContentRegionMax().X
+	w := contentRegionMax().X
 
 	if imgui.BeginTableV("abtn", 2, imgui.TableFlagsSizingStretchSame, vec2(float32(w)/2, -1), -1) {
 		imgui.TableNextColumn()
@@ -833,9 +839,20 @@ func (l *launcher) drawControls() {
 
 		imgui.TableNextColumn()
 
-		if l.bld.currentMode != Replay {
-			if imgui.ButtonV("Mods", vec2(-1, imgui.TextLineHeight()*2)) {
-				l.openPopup(newModPopup(l.bld))
+		nilMap := l.bld.currentMap == nil
+
+		if nilMap {
+			imgui.BeginDisabled()
+		}
+
+		if imgui.ButtonV("Mods", vec2(-1, imgui.TextLineHeight()*2)) {
+			l.openPopup(newModPopup(l.bld))
+		}
+
+		if nilMap {
+			imgui.EndDisabled()
+			if imgui.IsItemHoveredV(imgui.HoveredFlagsAllowWhenDisabled) {
+				imgui.SetTooltip("Select map/replay first")
 			}
 		}
 
@@ -909,11 +926,11 @@ func (l *launcher) selectReplay() {
 
 		mString := fmt.Sprintf("%s - %s [%s]\nPlayed by: %s", b.Artist, b.Name, b.Difficulty, l.bld.currentReplay.Username)
 
-		imgui.PushTextWrapPosV(imgui.ContentRegionMax().X / 2)
-		imgui.Text(mString)
+		imgui.PushTextWrapPosV(contentRegionMax().X / 2)
+		imgui.TextUnformatted(mString)
 		imgui.PopTextWrapPos()
 	} else {
-		imgui.Text("No replay selected")
+		imgui.TextUnformatted("No replay selected")
 	}
 
 	imgui.UnindentV(5)
@@ -999,8 +1016,8 @@ func (l *launcher) trySelectReplay(replay *knockoutReplay) {
 		if strings.ToLower(bMap.MD5) == strings.ToLower(replay.parsedReplay.BeatmapMD5) {
 			l.bld.currentMode = Replay
 			l.bld.replayPath = replay.path
-			l.bld.currentReplay = replay.parsedReplay
 			l.bld.setMap(bMap)
+			l.bld.setReplay(replay.parsedReplay)
 
 			return
 		}
@@ -1039,13 +1056,13 @@ func (l *launcher) newKnockout() {
 	if l.bld.knockoutReplays != nil && l.bld.currentMap != nil {
 		b := l.bld.currentMap
 
-		imgui.PushTextWrapPosV(imgui.ContentRegionMax().X / 2)
+		imgui.PushTextWrapPosV(contentRegionMax().X / 2)
 
-		imgui.Text(fmt.Sprintf("%s - %s [%s]", b.Artist, b.Name, b.Difficulty))
+		imgui.TextUnformatted(fmt.Sprintf("%s - %s [%s]", b.Artist, b.Name, b.Difficulty))
 
 		imgui.AlignTextToFramePadding()
 
-		imgui.Text(fmt.Sprintf("%d replays loaded", len(l.bld.knockoutReplays)))
+		imgui.TextUnformatted(fmt.Sprintf("%d replays loaded", len(l.bld.knockoutReplays)))
 
 		imgui.PopTextWrapPos()
 
@@ -1055,7 +1072,7 @@ func (l *launcher) newKnockout() {
 			l.openPopup(l.knockoutManager)
 		}
 	} else {
-		imgui.Text("No replays selected")
+		imgui.TextUnformatted("No replays selected")
 	}
 
 	imgui.UnindentV(5)
@@ -1122,11 +1139,11 @@ func (l *launcher) showSelect() {
 
 		mString := fmt.Sprintf("%s - %s [%s]", b.Artist, b.Name, b.Difficulty)
 
-		imgui.PushTextWrapPosV(imgui.ContentRegionMax().X / 2)
-		imgui.Text(mString)
+		imgui.PushTextWrapPosV(contentRegionMax().X / 2)
+		imgui.TextUnformatted(mString)
 		imgui.PopTextWrapPos()
 	} else {
-		imgui.Text("No map selected")
+		imgui.TextUnformatted("No map selected")
 	}
 
 	imgui.UnindentV(5)
@@ -1135,7 +1152,7 @@ func (l *launcher) showSelect() {
 }
 
 func (l *launcher) drawLowerPanel() {
-	w, h := imgui.WindowContentRegionMax().X, imgui.WindowContentRegionMax().Y
+	w, h := contentRegionMax().X, contentRegionMax().Y
 
 	if l.bld.currentMode != Play {
 		showProgress := l.bld.currentPMode == Record && l.showProgressBar
@@ -1170,7 +1187,7 @@ func (l *launcher) drawLowerPanel() {
 			}
 		}
 
-		imgui.SetCursorPos(vec2(imgui.WindowContentRegionMin().X, h-imgui.FrameHeightWithSpacing()))
+		imgui.SetCursorPos(vec2(contentRegionMin().X, h-imgui.FrameHeightWithSpacing()))
 
 		if showProgress {
 			if strings.HasPrefix(l.recordStatus, "Done") {
@@ -1191,7 +1208,7 @@ func (l *launcher) drawLowerPanel() {
 
 				cPos := imgui.CursorPos()
 
-				imgui.Text(l.recordStatusSpeed)
+				imgui.TextUnformatted(l.recordStatusSpeed)
 
 				cPos.X += 95
 
@@ -1199,13 +1216,13 @@ func (l *launcher) drawLowerPanel() {
 
 				eta := int(time.Since(l.encodeStart).Seconds())
 
-				imgui.Text("| Elapsed: " + util.FormatSeconds(eta))
+				imgui.TextUnformatted("| Elapsed: " + util.FormatSeconds(eta))
 
 				cPos.X += 135
 
 				imgui.SetCursorPos(cPos)
 
-				imgui.Text("| " + l.recordStatusETA)
+				imgui.TextUnformatted("| " + l.recordStatusETA)
 
 				imgui.PopFont()
 			}
@@ -1218,7 +1235,7 @@ func (l *launcher) drawLowerPanel() {
 
 	bW := (w) / 4
 
-	imgui.SetCursorPos(vec2(imgui.WindowContentRegionMax().X-w/2.5, h-imgui.FrameHeightWithSpacing()*2))
+	imgui.SetCursorPos(vec2(contentRegionMax().X-w/2.5, h-imgui.FrameHeightWithSpacing()*2))
 
 	centerTable("dansebutton", w/2.5, func() {
 		imgui.PushFont(Font48)
@@ -1231,10 +1248,10 @@ func (l *launcher) drawLowerPanel() {
 
 			if !dRun {
 				if s {
-					imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, true)
+					imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), true)
 				}
 			} else {
-				imgui.InternalPopItemFlag()
+				imgui.PopItemFlag()
 			}
 
 			name := "danse!"
@@ -1276,10 +1293,10 @@ func (l *launcher) drawLowerPanel() {
 
 			if !dRun {
 				if s {
-					imgui.InternalPopItemFlag()
+					imgui.PopItemFlag()
 				}
 			} else {
-				imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, true)
+				imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), true)
 			}
 
 			imgui.PopFont()
@@ -1292,9 +1309,9 @@ func (l *launcher) drawConfigPanel() {
 		l.currentEditor.setDanserRunning(l.danserRunning && l.bld.currentPMode == Watch)
 	}
 
-	w := imgui.WindowContentRegionMax().X
+	w := contentRegionMax().X
 
-	imgui.SetCursorPos(vec2(imgui.WindowContentRegionMax().X-float32(w)/2.5, 20))
+	imgui.SetCursorPos(vec2(contentRegionMax().X-float32(w)/2.5, 20))
 
 	if imgui.BeginTableV("rtpanel", 2, imgui.TableFlagsSizingStretchProp, vec2(float32(w)/2.5, 0), -1) {
 		imgui.TableSetupColumnV("rtpanel1", imgui.TableColumnFlagsWidthStretch, 0, 0)
@@ -1323,7 +1340,7 @@ func (l *launcher) drawConfigPanel() {
 		imgui.TableNextColumn()
 
 		imgui.AlignTextToFramePadding()
-		imgui.Text("Config:")
+		imgui.TextUnformatted("Config:")
 
 		imgui.SameLine()
 
@@ -1446,7 +1463,7 @@ func (l *launcher) drawConfigPanel() {
 		dRun := l.danserRunning && l.bld.currentPMode == Watch
 
 		if dRun {
-			imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, false)
+			imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), false)
 		}
 
 		if imgui.ButtonV("Edit", vec2(-1, 0)) {
@@ -1454,18 +1471,18 @@ func (l *launcher) drawConfigPanel() {
 		}
 
 		if dRun {
-			imgui.InternalPopItemFlag()
+			imgui.PopItemFlag()
 		}
 
 		imgui.EndTable()
 	}
 
 	if l.newCloneOpened {
-		popupSmall("Clone/new box", &l.newCloneOpened, true, func() {
+		popupSmall("Clone/new box", &l.newCloneOpened, true, 0, 0, func() {
 			if imgui.BeginTable("rfa", 1) {
 				imgui.TableNextColumn()
 
-				imgui.Text("Name:")
+				imgui.TextUnformatted("Name:")
 
 				imgui.SameLine()
 
@@ -1488,7 +1505,7 @@ func (l *launcher) drawConfigPanel() {
 				e := l.newCloneName == ""
 
 				if e {
-					imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, true)
+					imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), true)
 				}
 
 				if imgui.Button("Save##newclone") || (!e && (imgui.IsKeyPressedBool(imgui.KeyEnter) || imgui.IsKeyPressedBool(imgui.KeyKeypadEnter))) {
@@ -1512,7 +1529,7 @@ func (l *launcher) drawConfigPanel() {
 				}
 
 				if e {
-					imgui.InternalPopItemFlag()
+					imgui.PopItemFlag()
 				}
 
 				imgui.EndTable()

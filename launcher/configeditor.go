@@ -3,11 +3,13 @@ package launcher
 import (
 	"cmp"
 	"fmt"
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/sqweek/dialog"
+	"github.com/wieku/danser-go/app/osuapi"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/env"
+	"github.com/wieku/danser-go/framework/goroutines"
 	"github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
@@ -18,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const padY = 30
@@ -96,7 +99,7 @@ func (editor *settingsEditor) setSaveListener(saveListener func()) {
 }
 
 func (editor *settingsEditor) drawEditor() {
-	imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, false)
+	imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), false)
 
 	settings.General.OsuSkinsDir = editor.combined.General.OsuSkinsDir
 
@@ -174,7 +177,7 @@ func (editor *settingsEditor) drawEditor() {
 
 			imgui.PushStyleVarVec2(imgui.StyleVarWindowPadding, vec2(5, 0))
 
-			if imgui.BeginChildStrV("##Editor main", vec2(-1, -1), imgui.ChildFlagsNone, imgui.ChildFlagsAlwaysUseWindowPadding) {
+			if imgui.BeginChildStrV("##Editor main", vec2(-1, -1), imgui.ChildFlagsNone, imgui.WindowFlags(imgui.ChildFlagsAlwaysUseWindowPadding)) {
 				imgui.PopStyleVar()
 
 				editor.blockSearch = handleDragScroll()
@@ -203,7 +206,7 @@ func (editor *settingsEditor) drawEditor() {
 	if currentRunning {
 		centerTable("tabdanser is running", -1, func() {
 			imgui.AlignTextToFramePadding()
-			imgui.Text("Danser is running! Click")
+			imgui.TextUnformatted("Danser is running! Click")
 			imgui.SameLine()
 			if imgui.Button("Apply##drunning") {
 				if editor.saveListener != nil {
@@ -211,7 +214,7 @@ func (editor *settingsEditor) drawEditor() {
 				}
 			}
 			imgui.SameLine()
-			imgui.Text("to see changes.")
+			imgui.TextUnformatted("to see changes.")
 		})
 	}
 
@@ -220,7 +223,7 @@ func (editor *settingsEditor) drawEditor() {
 	imgui.PopStyleColor()
 	imgui.PopStyleColor()
 
-	imgui.InternalPopItemFlag()
+	imgui.PopItemFlag()
 }
 
 func (editor *settingsEditor) search() {
@@ -330,7 +333,7 @@ func (editor *settingsEditor) buildNavigationFor(u interface{}) {
 			if imgui.IsItemHovered() {
 				imgui.PushFont(Font24)
 				imgui.BeginTooltip()
-				imgui.SetTooltip(label)
+				setTooltip(label)
 				imgui.EndTooltip()
 				imgui.PopFont()
 			}
@@ -407,12 +410,51 @@ func (editor *settingsEditor) buildMainSection(jsonPath, sPath, name string, u r
 	posLocal := imgui.CursorPos()
 
 	imgui.PushFont(Font48)
-	imgui.Text(name)
+	imgui.TextUnformatted(name)
 
 	imgui.PopFont()
 	imgui.Separator()
 
 	editor.traverseChildren(jsonPath, sPath, u, reflect.StructField{})
+
+	if jsonPath == "##Credentials" {
+		centerTable("authbutton", -1, func() {
+			if imgui.Button("Reset Tokens##auth") {
+				settings.Credentails.AccessToken = ""
+				settings.Credentails.RefreshToken = ""
+				settings.Credentails.Expiry = time.Unix(0, 0)
+			}
+
+			imgui.SameLine()
+
+			if settings.Credentails.AuthType == "AuthorizationCode" {
+				if imgui.Button("Copy callback URL##auth") {
+					glfw.GetCurrentContext().SetClipboardString("http://localhost:" + strconv.Itoa(settings.Credentails.CallbackPort))
+				}
+
+				imgui.SameLine()
+			}
+
+			if imgui.Button("Authorize##auth") {
+				osuapi.Authorize(func(result osuapi.AuthResult, message string) {
+					goroutines.RunOS(func() {
+						switch result {
+						case osuapi.AuthError:
+							showMessage(mError, message)
+						default:
+							showMessage(mInfo, message)
+						}
+					})
+				})
+			}
+
+			imgui.SameLine()
+
+			if imgui.Button("Help##auth") {
+				platform.OpenURL("https://github.com/Wieku/danser-go/wiki/APIv2-Tutorial")
+			}
+		})
+	}
 
 	posLocal1 := imgui.CursorPos()
 
@@ -435,13 +477,13 @@ func (editor *settingsEditor) subSectionTempl(name string, afterTitle, content f
 	imgui.BeginGroup()
 
 	imgui.PushFont(Font24)
-	imgui.Text(strings.ToUpper(name))
+	imgui.TextUnformatted(strings.ToUpper(name))
 
 	afterTitle()
 
 	imgui.PopFont()
 
-	imgui.WindowDrawList().AddLine(imgui.CursorScreenPos(), imgui.CursorScreenPos().Add(vec2(imgui.ContentRegionMax().X, 0)), packColor(*imgui.StyleColorVec4(imgui.ColSeparator)))
+	imgui.WindowDrawList().AddLine(imgui.CursorScreenPos(), imgui.CursorScreenPos().Add(vec2(contentRegionMax().X, 0)), packColor(*imgui.StyleColorVec4(imgui.ColSeparator)))
 
 	imgui.Spacing()
 
@@ -796,7 +838,7 @@ func (editor *settingsEditor) buildVector(jsonPath1, jsonPath2 string, d reflect
 
 			imgui.TableNextColumn()
 
-			imgui.Text("x")
+			imgui.TextUnformatted("x")
 
 			imgui.TableNextColumn()
 
@@ -955,15 +997,15 @@ func (editor *settingsEditor) buildString(jsonPath string, f reflect.Value, d re
 			if editor.keyChange == jsonPath {
 				imgui.SetNextWindowFocus()
 
-				popupSmall("KeyChange"+jsonPath, &editor.keyChangeOpened, true, func() {
+				popupSmall("KeyChange"+jsonPath, &editor.keyChangeOpened, true, 0, 0, func() {
 					width := imgui.CalcTextSizeV("Click outside this box to cancel", false, 0).X + 30
 
 					centerTable("KeyChange1"+jsonPath, width, func() {
-						imgui.Text("Press any key...")
+						imgui.TextUnformatted("Press any key...")
 					})
 
 					centerTable("KeyChange2"+jsonPath, width, func() {
-						imgui.Text("Click outside this box to cancel")
+						imgui.TextUnformatted("Click outside this box to cancel")
 					})
 				})
 
@@ -1242,7 +1284,7 @@ func (editor *settingsEditor) buildInt(jsonPath string, f reflect.Value, d refle
 					}
 
 					imgui.AlignTextToFramePadding()
-					imgui.Text("Custom:")
+					imgui.TextUnformatted("Custom:")
 
 					imgui.SameLine()
 
@@ -1275,7 +1317,7 @@ func (editor *settingsEditor) buildInt(jsonPath string, f reflect.Value, d refle
 				editor.blockSearch = true
 
 				imgui.BeginTooltip()
-				imgui.SetTooltip(fmt.Sprintf(format, base))
+				setTooltip(fmt.Sprintf(format, base))
 				imgui.EndTooltip()
 			}
 		}
@@ -1289,12 +1331,12 @@ func (editor *settingsEditor) buildFloat(jsonPath string, f reflect.Value, d ref
 		if d.Tag.Get("string") != "" {
 			editor.buildFloatBox(jsonPath, f, d)
 		} else {
-			min := parseFloatOr(d.Tag.Get("min"), 0)
-			max := parseFloatOr(d.Tag.Get("max"), 1)
-			scale := parseFloatOr(d.Tag.Get("scale"), 1)
+			minV := parseFloat64Or(d.Tag.Get("min"), 0)
+			maxV := parseFloat64Or(d.Tag.Get("max"), 1)
+			scale := parseFloat64Or(d.Tag.Get("scale"), 1)
 			format := cmp.Or(d.Tag.Get("format"), "%.2f")
 
-			base := float32(f.Float())
+			base := f.Float()
 			valSpeed := base * scale
 
 			imgui.PushStyleVarVec2(imgui.StyleVarFramePadding, vec2(0, -3))
@@ -1302,7 +1344,7 @@ func (editor *settingsEditor) buildFloat(jsonPath string, f reflect.Value, d ref
 			cSpacing := imgui.CurrentStyle().ItemSpacing()
 			imgui.PushStyleVarVec2(imgui.StyleVarItemSpacing, vec2(cSpacing.X, cSpacing.Y-3))
 
-			if sliderFloatSlide(jsonPath, &valSpeed, min*scale, max*scale, "##"+format, imgui.SliderFlagsNoInput) {
+			if sliderFloatSlide(jsonPath, &valSpeed, minV*scale, maxV*scale, "##"+format, imgui.SliderFlagsNoInput) {
 				f.SetFloat(float64(valSpeed / scale))
 			}
 
@@ -1314,7 +1356,7 @@ func (editor *settingsEditor) buildFloat(jsonPath string, f reflect.Value, d ref
 				editor.blockSearch = true
 
 				imgui.BeginTooltip()
-				imgui.SetTooltip(fmt.Sprintf(format, valSpeed))
+				setTooltip(fmt.Sprintf(format, valSpeed))
 				imgui.EndTooltip()
 			}
 		}
@@ -1384,7 +1426,7 @@ func (editor *settingsEditor) drawComponent(jsonPath, label string, long, checkb
 
 		imgui.BeginGroup()
 		imgui.AlignTextToFramePadding()
-		imgui.Text(label)
+		imgui.TextUnformatted(label)
 		imgui.EndGroup()
 
 		if imgui.IsItemHovered() {
@@ -1410,7 +1452,7 @@ func (editor *settingsEditor) drawComponent(jsonPath, label string, long, checkb
 
 				imgui.PushTextWrapPosV(400)
 
-				imgui.Text(tTip)
+				imgui.TextUnformatted(tTip)
 
 				imgui.PopTextWrapPos()
 				imgui.EndTooltip()
@@ -1440,7 +1482,7 @@ func (editor *settingsEditor) tryLockLive(d reflect.StructField) bool {
 
 	if dRunLock {
 		imgui.BeginGroup()
-		imgui.InternalPushItemFlag(imgui.ItemFlagsDisabled, true)
+		imgui.PushItemFlag(imgui.ItemFlags(imgui.ItemFlagsDisabled), true)
 		imgui.PushStyleColorVec4(imgui.ColText, vec4(0.6, 0.6, 0.6, 1))
 	}
 
@@ -1449,16 +1491,16 @@ func (editor *settingsEditor) tryLockLive(d reflect.StructField) bool {
 
 func (editor *settingsEditor) unlockLive(plural bool) {
 	imgui.PopStyleColor()
-	imgui.InternalPopItemFlag()
+	imgui.PopItemFlag()
 	imgui.EndGroup()
 
 	if imgui.IsItemHovered() {
 		imgui.BeginTooltip()
 
 		if plural {
-			imgui.Text("These options can't be edited while danser is running.")
+			imgui.TextUnformatted("These options can't be edited while danser is running.")
 		} else {
-			imgui.Text("This option can't be edited while danser is running.")
+			imgui.TextUnformatted("This option can't be edited while danser is running.")
 		}
 
 		imgui.EndTooltip()
@@ -1476,6 +1518,14 @@ func parseIntOr(value string, alt int) int {
 func parseFloatOr(value string, alt float32) float32 {
 	if i, err := strconv.ParseFloat(value, 32); err == nil {
 		return float32(i)
+	}
+
+	return alt
+}
+
+func parseFloat64Or(value string, alt float64) float64 {
+	if i, err := strconv.ParseFloat(value, 64); err == nil {
+		return i
 	}
 
 	return alt

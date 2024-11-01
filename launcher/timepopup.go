@@ -1,10 +1,11 @@
 package launcher
 
 import (
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/wieku/danser-go/app/beatmap"
-	"github.com/wieku/danser-go/app/rulesets/osu/performance/pp220930"
+	"github.com/wieku/danser-go/app/rulesets/osu/performance"
+	"github.com/wieku/danser-go/app/rulesets/osu/performance/api"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/app/states/components/overlays/play"
 	"github.com/wieku/danser-go/framework/goroutines"
@@ -23,7 +24,7 @@ type timePopup struct {
 	graphStatus string
 
 	timeCMap *beatmap.BeatMap
-	peaks    pp220930.StrainPeaks
+	peaks    api.StrainPeaks
 	sGraph   *play.StrainGraph
 
 	fbo *buffer.Framebuffer
@@ -67,7 +68,7 @@ func (m *timePopup) drawTimeMenu() {
 	start := &m.bld.start
 	end := &m.bld.end
 
-	imgui.Text("Start time:")
+	imgui.TextUnformatted("Start time:")
 	imgui.PushFont(Font16)
 	imgui.SetNextItemWidth(-1)
 	if sliderIntSlide("##Start time", &start.value, 0, end.ogValue-1, util.FormatSeconds(int(start.value)), imgui.SliderFlagsNoInput) {
@@ -79,7 +80,7 @@ func (m *timePopup) drawTimeMenu() {
 		end.value = start.value + 1
 	}
 
-	imgui.Text("End time:")
+	imgui.TextUnformatted("End time:")
 	imgui.PushFont(Font16)
 	imgui.SetNextItemWidth(-1)
 	if sliderIntSlide("##End time", &end.value, 1, end.ogValue, util.FormatSeconds(int(end.value)), imgui.SliderFlagsNoInput) {
@@ -112,7 +113,7 @@ func (m *timePopup) drawStrainGraph() {
 			beatmap.ParseTimingPointsAndPauses(m.timeCMap)
 			beatmap.ParseObjects(m.timeCMap, true, false)
 
-			m.peaks = pp220930.CalculateStrainPeaks(m.timeCMap.HitObjects, m.timeCMap.Diff)
+			m.peaks = performance.GetDifficultyCalculator().CalculateStrainPeaks(m.timeCMap.HitObjects, m.timeCMap.Diff)
 
 			m.graphStatus = ""
 		})
@@ -127,7 +128,7 @@ func (m *timePopup) drawStrainGraph() {
 		dummyExactY(pad)
 
 		centerTable("sgraphstatus", -1, func() {
-			imgui.Text(m.graphStatus)
+			imgui.TextUnformatted(m.graphStatus)
 		})
 
 		dummyExactY(pad)

@@ -10,44 +10,30 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"time"
 )
 
 var Credentails = &credentials{
-	ApiV2: &ApiV2{
-		ClientId:     5, // osu!lazer
-		ClientSecret: "FGc9GAtyHzeQDshWP5Ah7dega8hJACAJpQtw6OXk",
-		Username:     "Guest",
-		Password:     "",
-	},
+	AuthType:     "ClientCredentials",
+	CallbackPort: 8294,
 }
 
 type credentials struct {
-	ApiV1Key string `label:"API V1 Key" long:"true" password:"true" tooltip:"Valid API V1 Key has to be provided to have access to global leaderboards\n\nDON'T SHARE IT WITH OTHERS!!!" hidePath:"true"`
-	ApiV2    *ApiV2
-	//Future stuff
-	//ClientId     string
-	//ClientSecret string
-	//
-	//CallbackPort uint
-	//
-	//AccessToken  string
-	//ExpireDate   time.Time
-	//RefreshToken string
-}
+	ClientId     string
+	ClientSecret string `long:"true" password:"true"`
 
-type ApiV2 struct {
-	ClientId     int
-	ClientSecret string
-	Username     string
-	Password     string `password:"true"`
+	AuthType string `combo:"ClientCredentials|Client credentials (Anonymous),AuthorizationCode|Authorization code (User authenticated)"`
+	//
+	CallbackPort int `string:"true" min:"0" max:"65535" showif:"AuthType=AuthorizationCode"`
+
+	AccessToken  string    `skip:"true" long:"true" password:"true"`
+	Expiry       time.Time `skip:"true"`
+	RefreshToken string    `skip:"true" long:"true" password:"true" showif:"AuthType=AuthorizationCode"`
 }
 
 var srcDataCred []byte
 
 func LoadCredentials() {
-	migrateKey()
-
 	if err := os.MkdirAll(env.ConfigDir(), 0755); err != nil {
 		panic(err)
 	}
@@ -101,32 +87,6 @@ func SaveCredentials(forceSave bool) {
 
 		if err = os.WriteFile(fPath, data, 0644); err != nil {
 			panic(err)
-		}
-	}
-}
-
-func migrateKey() {
-	_, err := os.Stat(filepath.Join(env.DataDir(), "api.txt"))
-	if err == nil {
-		err = os.Rename(filepath.Join(env.DataDir(), "api.txt"), filepath.Join(env.ConfigDir(), "api.txt"))
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	file, err := os.Open(filepath.Join(env.ConfigDir(), "api.txt"))
-	if err == nil {
-		var data []byte
-
-		data, err = io.ReadAll(files.NewUnicodeReader(file))
-
-		file.Close()
-
-		if err == nil {
-			Credentails.ApiV1Key = strings.TrimSpace(string(data))
-			SaveCredentials(false)
-
-			os.Remove(filepath.Join(env.ConfigDir(), "api.txt"))
 		}
 	}
 }
