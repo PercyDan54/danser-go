@@ -204,13 +204,12 @@ func initGameplay() *gameplay {
 				XOffset: 0,
 				YOffset: 0,
 			},
+			Mode:           "Normal",
+			ModsOnly:       false,
 			AlignRight:     false,
 			HideOthers:     false,
 			ShowAvatars:    false,
-			ApiV2:          false,
 			ExplosionScale: 1.0,
-			ApiV2Type:      "friend",
-			Mods:           "",
 		},
 		Mods: &mods{
 			hudElementOffset: &hudElementOffset{
@@ -224,6 +223,7 @@ func initGameplay() *gameplay {
 			},
 			HideInReplays:     false,
 			FoldInReplays:     false,
+			ShowLazerMod:      true,
 			AdditionalSpacing: 0,
 		},
 		Boundaries: &boundaries{
@@ -259,6 +259,7 @@ func initGameplay() *gameplay {
 			},
 			Speed: 1,
 		},
+		SBFont:                  "",
 		HUDFont:                 "",
 		ShowResultsScreen:       true,
 		ResultsScreenTime:       5,
@@ -268,7 +269,8 @@ func initGameplay() *gameplay {
 		FlashlightDim:           1,
 		PlayUsername:            "Guest",
 		IgnoreFailsInReplays:    false,
-		UseLazerPP:              false,
+		PPVersion:               "latest",
+		LazerClassicScore:       false,
 	}
 }
 
@@ -288,6 +290,7 @@ type gameplay struct {
 	Boundaries              *boundaries
 	Underlay                *underlay
 	BeatSyncAnimation       *beatSyncAnimation
+	SBFont                  string  `label:"Scoreboard / Ranking font" file:"Select SBR font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for score board names and ranking panel (use Aller Light to match osu!)" liveedit:"false"`
 	HUDFont                 string  `label:"Overlay (HUD) font" file:"Select HUD font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for PP/UR/hit counts" liveedit:"false"`
 	ShowResultsScreen       bool    `liveedit:"false"`
 	ResultsScreenTime       float64 `label:"Results screen duration" min:"1" max:"20" format:"%.1fs" liveedit:"false"`
@@ -297,7 +300,8 @@ type gameplay struct {
 	FlashlightDim           float64
 	PlayUsername            string `liveedit:"false"`
 	IgnoreFailsInReplays    bool
-	UseLazerPP              bool `liveedit:"false" skip:"true"`
+	PPVersion               string `liveedit:"false" label:"PP counter version" combo:"211112|2021-11-12 (First Xexxar),220930|2022-09-30 (current web),latest|2024 pp rework (latest)"`
+	LazerClassicScore       bool   `label:"Use \"Classic\" score for osu!lazer plays"`
 }
 
 type boundaries struct {
@@ -406,19 +410,19 @@ type kpsCounter struct {
 
 type scoreBoard struct {
 	*hudElementOffset
-	AlignRight     bool `label:"Align to the right" label:"Simulates the second team of osu! multiplayer"`
+	Mode           string `combo:"Normal,Country,Friends" tooltip:"Country and Friends modes require osu!supporter and Authorization Code API Mode!"`
+	ModsOnly       bool   `label:"Show mod leaderboard"`
+	AlignRight     bool   `label:"Align to the right" label:"Simulates the second team of osu! multiplayer"`
 	HideOthers     bool
 	ShowAvatars    bool
 	ExplosionScale float64 `min:"0.1" max:"2" scale:"100" format:"%.0f%%"`
-	ApiV2          bool
-	ApiV2Type      string `combo:"global,country,friend"`
-	Mods           string
 }
 
 type mods struct {
 	*hudElementOffset
 	HideInReplays     bool
 	FoldInReplays     bool
+	ShowLazerMod      bool
 	AdditionalSpacing float64 `string:"true" min:"-1366" max:"1366"`
 }
 

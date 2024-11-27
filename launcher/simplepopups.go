@@ -1,7 +1,7 @@
 package launcher
 
 import (
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/wieku/danser-go/build"
 	"github.com/wieku/danser-go/framework/graphics/texture"
 	"github.com/wieku/danser-go/framework/math/mutils"
@@ -17,29 +17,11 @@ func drawSpeedMenu(bld *builder) {
 	imgui.Spacing()
 }
 
-func drawParamMenu(bld *builder) {
-	sliderFloatReset("Approach Rate (AR)", &bld.ar, 0, 10, "%.1f")
-	imgui.Spacing()
-
-	if bld.currentMode == Play || bld.currentMode == DanserReplay {
-		sliderFloatReset("Overall Difficulty (OD)", &bld.od, 0, 10, "%.1f")
-		imgui.Spacing()
-	}
-
-	sliderFloatReset("Circle Size (CS)", &bld.cs, 0, 10, "%.1f")
-	imgui.Spacing()
-
-	if bld.currentMode == Play || bld.currentMode == DanserReplay {
-		sliderFloatReset("Health Drain (HP)", &bld.hp, 0, 10, "%.1f")
-		imgui.Spacing()
-	}
-}
-
 func drawCDMenu(bld *builder) {
 	if imgui.BeginTable("dfa", 2) {
 		imgui.TableNextColumn()
 
-		imgui.Text("Mirrored cursors:")
+		imgui.TextUnformatted("Mirrored cursors:")
 
 		imgui.TableNextColumn()
 
@@ -53,7 +35,7 @@ func drawCDMenu(bld *builder) {
 
 		imgui.TableNextColumn()
 
-		imgui.Text("Tag cursors:")
+		imgui.TextUnformatted("Tag cursors:")
 
 		imgui.TableNextColumn()
 
@@ -77,7 +59,7 @@ func drawRecordMenu(bld *builder) {
 		imgui.TableNextColumn()
 
 		imgui.AlignTextToFramePadding()
-		imgui.Text("Output name:")
+		imgui.TextUnformatted("Output name:")
 
 		imgui.TableNextColumn()
 
@@ -89,7 +71,7 @@ func drawRecordMenu(bld *builder) {
 			imgui.TableNextColumn()
 
 			imgui.AlignTextToFramePadding()
-			imgui.Text("Screenshot at:")
+			imgui.TextUnformatted("Screenshot at:")
 
 			imgui.TableNextColumn()
 
@@ -117,7 +99,7 @@ func drawRecordMenu(bld *builder) {
 				imgui.TableNextColumn()
 
 				imgui.AlignTextToFramePadding()
-				imgui.Text("s")
+				imgui.TextUnformatted("s")
 
 				imgui.EndTable()
 			}
@@ -133,7 +115,7 @@ func drawAbout(dTex texture.Texture) {
 	})
 
 	centerTable("about2", -1, func() {
-		imgui.Text("danser-go " + build.VERSION)
+		imgui.TextUnformatted("danser-go " + build.VERSION)
 	})
 
 	centerTable("about3", -1, func() {
@@ -145,11 +127,11 @@ func drawAbout(dTex texture.Texture) {
 	imgui.Dummy(vec2(1, imgui.FrameHeight()))
 
 	centerTable("about4.1", -1, func() {
-		imgui.Text("Advanced visualisation multi-tool")
+		imgui.TextUnformatted("Advanced visualisation multi-tool")
 	})
 
 	centerTable("about4.2", -1, func() {
-		imgui.Text("for osu!")
+		imgui.TextUnformatted("for osu!")
 	})
 
 	imgui.Dummy(vec2(1, imgui.FrameHeight()))
@@ -186,39 +168,13 @@ func drawAbout(dTex texture.Texture) {
 func drawLauncherConfig() {
 	imgui.PushStyleVarVec2(imgui.StyleVarCellPadding, vec2(imgui.CurrentStyle().CellPadding().X, 10))
 
-	checkboxOption := func(text string, value *bool) {
-		if imgui.BeginTableV(text+"table", 2, 0, vec2(-1, 0), -1) {
-			imgui.TableSetupColumnV(text+"table1", imgui.TableColumnFlagsWidthStretch, 0, imgui.ID(0))
-			imgui.TableSetupColumnV(text+"table2", imgui.TableColumnFlagsWidthFixed, 0, imgui.ID(1))
-
-			imgui.TableNextColumn()
-
-			pos1 := imgui.CursorPos()
-
-			imgui.AlignTextToFramePadding()
-
-			imgui.PushTextWrapPos()
-
-			imgui.Text(text)
-
-			imgui.PopTextWrapPos()
-
-			pos2 := imgui.CursorPos()
-
-			imgui.TableNextColumn()
-
-			imgui.SetCursorPos(vec2(imgui.CursorPosX(), (pos1.Y+pos2.Y-imgui.FrameHeightWithSpacing())/2))
-			imgui.Checkbox("##ck"+text, value)
-
-			imgui.EndTable()
-		}
-	}
-
 	checkboxOption("Check for updates on startup", &launcherConfig.CheckForUpdates)
 
 	checkboxOption("Load latest replay on startup", &launcherConfig.LoadLatestReplay)
 
 	checkboxOption("Speed up startup on slow HDDs.\nWon't detect deleted/updated\nmaps!", &launcherConfig.SkipMapUpdate)
+
+	checkboxOption("Load changes in Songs folder automatically", &launcherConfig.AutoRefreshDB)
 
 	checkboxOption("Show JSON paths in config editor", &launcherConfig.ShowJSONPaths)
 
@@ -227,7 +183,7 @@ func drawLauncherConfig() {
 	checkboxOption("Preview selected maps", &launcherConfig.PreviewSelected)
 
 	imgui.AlignTextToFramePadding()
-	imgui.Text("Preview volume")
+	imgui.TextUnformatted("Preview volume")
 
 	volume := int32(launcherConfig.PreviewVolume * 100)
 

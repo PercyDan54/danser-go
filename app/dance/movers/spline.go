@@ -7,6 +7,7 @@ import (
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
+	"math"
 )
 
 const (
@@ -18,16 +19,19 @@ const (
 type SplineMover struct {
 	*basicMover
 
-	curve *curves.Spline
+	curve    *curves.Spline
+	objs     []objects.IHitObject
+	lastTime float64
 }
 
 func NewSplineMover() MultiPointMover {
-	return &SplineMover{basicMover: &basicMover{}}
+	return &SplineMover{basicMover: &basicMover{}, lastTime: -math.MaxFloat64}
 }
 
 func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 	config := settings.CursorDance.MoverSettings.Spline[mover.id%len(settings.CursorDance.MoverSettings.Spline)]
 
+	mover.objs = mover.objs[:0]
 	points := make([]vector.Vector2f, 0)
 	timing := make([]float64, 0)
 
@@ -40,14 +44,14 @@ func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 		o := objs[i]
 
 		if i == 0 {
-			cEnd := o.GetStackedEndPositionMod(mover.diff.Mods)
-			nStart := objs[i+1].GetStackedStartPositionMod(mover.diff.Mods)
+			cEnd := o.GetStackedEndPositionMod(mover.diff)
+			nStart := objs[i+1].GetStackedStartPositionMod(mover.diff)
 
 			var wPoint vector.Vector2f
 
 			switch s := o.(type) {
 			case objects.ILongObject:
-				wPoint = cEnd.Add(vector.NewVec2fRad(s.GetEndAngleMod(mover.diff.Mods), cEnd.Dst(nStart)*0.7))
+				wPoint = cEnd.Add(vector.NewVec2fRad(s.GetEndAngleMod(mover.diff), cEnd.Dst(nStart)*0.7))
 			default:
 				wPoint = cEnd.Lerp(nStart, 0.333)
 			}
@@ -61,14 +65,14 @@ func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 		}
 
 		if _, ok := o.(objects.ILongObject); ok || i == len(objs)-1 {
-			pEnd := objs[i-1].GetStackedEndPositionMod(mover.diff.Mods)
-			cStart := o.GetStackedStartPositionMod(mover.diff.Mods)
+			pEnd := objs[i-1].GetStackedEndPositionMod(mover.diff)
+			cStart := o.GetStackedStartPositionMod(mover.diff)
 
 			var wPoint vector.Vector2f
 
 			switch s := o.(type) {
 			case objects.ILongObject:
-				wPoint = cStart.Add(vector.NewVec2fRad(s.GetStartAngleMod(mover.diff.Mods), cStart.Dst(pEnd)*0.7))
+				wPoint = cStart.Add(vector.NewVec2fRad(s.GetStartAngleMod(mover.diff), cStart.Dst(pEnd)*0.7))
 			default:
 				wPoint = cStart.Lerp(pEnd, 0.333)
 			}
@@ -80,9 +84,9 @@ func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 
 			break
 		} else if i > 1 && i < len(objs)-1 {
-			pos1 := objs[i-1].GetStackedStartPositionMod(mover.diff.Mods)
-			pos2 := o.GetStackedStartPositionMod(mover.diff.Mods)
-			pos3 := objs[i+1].GetStackedStartPositionMod(mover.diff.Mods)
+			pos1 := objs[i-1].GetStackedStartPositionMod(mover.diff)
+			pos2 := o.GetStackedStartPositionMod(mover.diff)
+			pos3 := objs[i+1].GetStackedStartPositionMod(mover.diff)
 
 			min := float32(streamEntryMin)
 			max := float32(streamEntryMax)
@@ -160,8 +164,9 @@ func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 			}
 		}
 
-		points = append(points, o.GetStackedEndPositionMod(mover.diff.Mods))
+		points = append(points, o.GetStackedEndPositionMod(mover.diff))
 		timing = append(timing, o.GetStartTime())
+		mover.objs = append(mover.objs, o)
 	}
 
 	timeDiff := make([]float32, len(timing)-1)
@@ -190,6 +195,34 @@ func (mover *SplineMover) SetObjects(objs []objects.IHitObject) int {
 }
 
 func (mover *SplineMover) Update(time float64) vector.Vector2f {
-	t := mutils.Clamp((time-mover.startTime)/(mover.endTime-mover.startTime), 0, 1)
-	return mover.curve.PointAt(float32(t))
+	useMover := true
+	var overridePos vector.Vector2f
+
+	for i := 0; i < len(mover.objs); i++ {
+		g := mover.objs[i]
+
+		gStartTime := mover.GetObjectsStartTime(g)
+
+		if gStartTime > time {
+			break
+		}
+
+		if mover.lastTime <= gStartTime {
+			useMover = false
+
+			mover.objs = append(mover.objs[:i], mover.objs[i+1:]...)
+			i--
+
+			overridePos = mover.GetObjectsStartPosition(g)
+		}
+	}
+
+	mover.lastTime = time
+
+	if useMover {
+		t := mutils.Clamp((time-mover.startTime)/(mover.endTime-mover.startTime), 0, 1)
+		return mover.curve.PointAt(float32(t))
+	}
+
+	return overridePos
 }

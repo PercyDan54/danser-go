@@ -1,9 +1,11 @@
 module github.com/wieku/danser-go
 
-go 1.22
+go 1.22.0
+
+toolchain go1.22.4
 
 require (
-	github.com/AllenDang/cimgui-go v0.0.0-20240313173929-fbcdab4101ce
+	github.com/AllenDang/cimgui-go v1.0.0
 	github.com/EdlinOrg/prominentcolor v1.0.0
 	github.com/Microsoft/go-winio v0.6.1
 	github.com/dustin/go-humanize v1.0.0
@@ -12,17 +14,16 @@ require (
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b
 	github.com/go-gl/mathgl v1.0.0
 	github.com/itchio/lzma v0.0.0-20190703113020-d3e24e3e3d49
-	github.com/karrick/godirwalk v1.16.1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/nattawitc/rich-go v0.0.0-20200402133947-4fcadd738f5b
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/shirou/gopsutil/v3 v3.23.7
 	github.com/sqweek/dialog v0.0.0-20220504154117-be45b268883a
-	github.com/thehowl/go-osuapi v0.0.0-20181219091033-b29455689881
-	github.com/wieku/rplpa v1.0.0
+	github.com/wieku/rplpa v1.0.2
 	golang.org/x/exp v0.0.0-20220312040426-20fd27f61765
 	golang.org/x/image v0.10.0
-	golang.org/x/sys v0.10.0
+	golang.org/x/oauth2 v0.23.0
+	golang.org/x/sys v0.25.0
 	golang.org/x/text v0.11.0
 )
 
@@ -49,3 +50,5 @@ require (
 )
 
 replace github.com/sqweek/dialog => github.com/wieku/dialog v1.0.0
+
+replace github.com/AllenDang/cimgui-go => github.com/Wieku/cimgui-go v1.0.0

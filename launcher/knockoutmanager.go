@@ -2,7 +2,7 @@ package launcher
 
 import (
 	"fmt"
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/utils"
 	"strconv"
@@ -63,7 +63,7 @@ func (km *knockoutManagerPopup) drawManager() {
 		numText = fmt.Sprintf("%d replays", km.countEnabled)
 	}
 
-	imgui.Text(numText + " selected")
+	imgui.TextUnformatted(numText + " selected")
 
 	imgui.PopFont()
 

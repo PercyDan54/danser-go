@@ -5,7 +5,7 @@ package launcher
 */
 import "C"
 import (
-	"github.com/AllenDang/cimgui-go"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
@@ -134,6 +134,7 @@ func SetupImgui(win *glfw.Window) {
 	awesomeBuilder.AddChar(0xF1FC) // paintbrush
 	awesomeBuilder.AddChar(0xF43C) // chess-board
 	awesomeBuilder.AddChar(0xF188) // bug
+	awesomeBuilder.AddChar(0xF2EA) // rotate-left
 
 	awesomeRange := imgui.NewGlyphRange()
 	awesomeBuilder.BuildRanges(awesomeRange)
@@ -638,4 +639,22 @@ func isAnyScrollbarActive() bool {
 	activeWindow := context.ActiveIdWindow()
 
 	return activeWindow.CData != nil && imgui.InternalActiveID() == imgui.InternalWindowScrollbarID(activeWindow, imgui.AxisY)
+}
+
+func sliderDoubleV(label string, v *float64, vMin float64, vMax float64, format string, flags imgui.SliderFlags) bool {
+	pinner := &runtime.Pinner{}
+
+	ptrV := unsafe.Pointer(v)
+	ptrMin := unsafe.Pointer(&vMin)
+	ptrMax := unsafe.Pointer(&vMax)
+
+	pinner.Pin(ptrV)
+	pinner.Pin(ptrMin)
+	pinner.Pin(ptrMax)
+
+	defer func() {
+		pinner.Unpin()
+	}()
+
+	return imgui.SliderScalarV(label, imgui.DataTypeDouble, uintptr(ptrV), uintptr(ptrMin), uintptr(ptrMax), format, flags)
 }
