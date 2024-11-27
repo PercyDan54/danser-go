@@ -88,6 +88,8 @@ type subSet struct {
 	failed     bool
 	sdpfFail   bool
 	forceFail  bool
+
+	potentialCombo int
 }
 
 type hitListener func(cursor *graphics.Cursor, judgementResult JudgementResult, score Score)
@@ -127,6 +129,8 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 	for i, cursor := range cursors {
 		diff := diffs[i]
 
+		beatMap.CalculateStackLeniency(diff) // Calculate additional stack indexes for DA/EZ/HR/whatever that changes Preempt
+
 		diff.Mods = diff.Mods | (beatMap.Diff.Mods & difficulty.ScoreV2) // if beatmap has ScoreV2 mod, force it for all players
 		diff.Mods = diff.Mods | (beatMap.Diff.Mods & difficulty.Lazer)   // same for Lazer
 
@@ -160,7 +164,7 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 			log.Println("\tTotal:", star.Total)
 
 			pp := performance.CreatePPCalculator()
-			ppResults := pp.Calculate(star, api.PerfScore{CountGreat: -1, MaxCombo: -1, Accuracy: 1}, diff)
+			ppResults := pp.Calculate(star, api.PerfScore{CountGreat: -1, MaxCombo: -1, Accuracy: 1, SliderEnd: -1}, diff)
 
 			log.Println("SS PP:")
 			log.Println("\tAim:  ", ppResults.Aim)
@@ -456,11 +460,16 @@ func (set *OsuRuleSet) SendResult(cursor *graphics.Cursor, judgementResult Judge
 		subSet.numObjects++
 	}
 
+	if judgementResult.ComboResult == Increase || judgementResult.ComboResult == Reset {
+		subSet.potentialCombo++
+	}
+
 	subSet.scoreProcessor.AddResult(judgementResult)
 	subSet.score.AddResult(judgementResult)
 
 	subSet.score.Score = subSet.scoreProcessor.GetScore()
-	subSet.score.Combo = max(uint(subSet.scoreProcessor.GetCombo()), subSet.score.Combo)
+	subSet.score.CurrentCombo = uint(subSet.scoreProcessor.GetCombo())
+	subSet.score.Combo = max(subSet.score.CurrentCombo, subSet.score.Combo)
 	subSet.score.Accuracy = subSet.scoreProcessor.GetAccuracy()
 
 	subSet.score.CalculateGrade(subSet.player.diff.Mods)
@@ -583,7 +592,7 @@ func (set *OsuRuleSet) CanBeHitStable(time int64, object HitObject, player *diff
 			}
 		}
 
-		if index > 0 && set.processed[index-1].GetObject().GetStackIndex(player.diff.Mods) > 0 && !set.processed[index-1].IsHit(player) {
+		if index > 0 && set.processed[index-1].GetObject().GetStackIndexMod(player.diff) > 0 && !set.processed[index-1].IsHit(player) {
 			return Ignored //don't shake the stacks
 		}
 	}
@@ -725,6 +734,47 @@ func (set *OsuRuleSet) SetEndListener(listener endListener) {
 
 func (set *OsuRuleSet) SetFailListener(listener failListener) {
 	set.failListener = listener
+}
+
+func (set *OsuRuleSet) GetFCPP(cursor *graphics.Cursor) api.PPv2Results {
+	subSet := set.cursors[cursor]
+
+	index := max(1, subSet.numObjects) - 1
+
+	diff := set.oppDiffs[subSet.player.maskedModString][index]
+
+	apiScore := subSet.score.ToPerfScore()
+	apiScore.MaxCombo = subSet.potentialCombo
+	apiScore.CountGreat += apiScore.CountMiss
+	apiScore.CountMiss = 0
+	apiScore.SliderBreaks = 0
+
+	rawScore := int64(apiScore.CountGreat*300 + apiScore.CountOk*100 + apiScore.CountMeh*50)
+	maxRawScore := int64(subSet.numObjects * 300)
+
+	if subSet.player.diff.CheckModActive(difficulty.Lazer) {
+		pointScore := SliderPoint.ScoreValueMod(subSet.player.diff.Mods) * int64(subSet.score.MaxTicks)
+		sEndScore := SliderEnd.ScoreValueMod(subSet.player.diff.Mods)
+		if subSet.player.lzNoSliderAcc {
+			sEndScore = LegacySliderEnd.ScoreValueMod(subSet.player.diff.Mods)
+		}
+
+		apiScore.Accuracy = float64(rawScore+pointScore+int64(apiScore.SliderEnd)*sEndScore) / float64(maxRawScore+pointScore+int64(subSet.score.MaxSliderEnd)*sEndScore)
+	} else {
+		apiScore.Accuracy = float64(rawScore) / float64(maxRawScore)
+	}
+
+	return subSet.ppv2.Calculate(diff, apiScore, subSet.player.diff)
+}
+
+func (set *OsuRuleSet) GetSSPP(cursor *graphics.Cursor) api.PPv2Results {
+	subSet := set.cursors[cursor]
+
+	index := max(1, subSet.numObjects) - 1
+
+	diff := set.oppDiffs[subSet.player.maskedModString][index]
+
+	return subSet.ppv2.Calculate(diff, api.PerfScore{CountGreat: -1, MaxCombo: -1, Accuracy: 1, SliderEnd: -1}, subSet.player.diff)
 }
 
 func (set *OsuRuleSet) GetScore(cursor *graphics.Cursor) Score {

@@ -259,6 +259,7 @@ func initGameplay() *gameplay {
 			},
 			Speed: 1,
 		},
+		SBFont:                  "",
 		HUDFont:                 "",
 		ShowResultsScreen:       true,
 		ResultsScreenTime:       5,
@@ -289,6 +290,7 @@ type gameplay struct {
 	Boundaries              *boundaries
 	Underlay                *underlay
 	BeatSyncAnimation       *beatSyncAnimation
+	SBFont                  string  `label:"Scoreboard / Ranking font" file:"Select SBR font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for score board names and ranking panel (use Aller Light to match osu!)" liveedit:"false"`
 	HUDFont                 string  `label:"Overlay (HUD) font" file:"Select HUD font" filter:"TrueType/OpenType Font (*.ttf, *.otf)|ttf,otf" tooltip:"Sets the font that will be used for PP/UR/hit counts" liveedit:"false"`
 	ShowResultsScreen       bool    `liveedit:"false"`
 	ResultsScreenTime       float64 `label:"Results screen duration" min:"1" max:"20" format:"%.1fs" liveedit:"false"`

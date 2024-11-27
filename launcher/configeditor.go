@@ -229,7 +229,7 @@ func (editor *settingsEditor) drawEditor() {
 func (editor *settingsEditor) search() {
 	editor.sectionCache = make(map[string]imgui.Vec2)
 	editor.searchCache = make(map[string]int)
-	editor.buildSearchCache("Main", reflect.ValueOf(editor.combined), editor.searchString, false)
+	editor.buildSearchCache("Main", reflect.ValueOf(editor.combined), strings.ToLower(editor.searchString), false)
 }
 
 func (editor *settingsEditor) buildSearchCache(path string, u reflect.Value, search string, omitSearch bool) bool {
@@ -511,6 +511,11 @@ func (editor *settingsEditor) buildSubSection(jsonPath, sPath, name string, u re
 }
 
 func (editor *settingsEditor) buildArray(jsonPath, sPath, name string, u reflect.Value, d reflect.StructField) {
+	minSize := 1
+	if lVal, ok := d.Tag.Lookup("minSize"); ok {
+		minSize, _ = strconv.Atoi(lVal)
+	}
+
 	editor.subSectionTempl(name, func() {
 		imgui.SameLine()
 		imgui.Dummy(vec2(2, 0))
@@ -523,13 +528,17 @@ func (editor *settingsEditor) buildArray(jsonPath, sPath, name string, u reflect
 			if fName, ok := d.Tag.Lookup("new"); ok {
 				u.Set(reflect.Append(u, reflect.ValueOf(settings.DefaultsFactory).MethodByName(fName).Call(nil)[0]))
 			}
+
+			if u.Len() == 1 { // We need to rebuild the search cache if we started from 0 elements
+				editor.search()
+			}
 		}
 
 		ImIO.SetFontGlobalScale(1)
 		imgui.PopFont()
 	}, func() {
 		for j := 0; j < u.Len(); j++ {
-			if editor.buildArrayElement(fmt.Sprintf("%s[%d]", jsonPath, j), sPath, u.Index(j), d, j) && u.Len() > 1 {
+			if editor.buildArrayElement(fmt.Sprintf("%s[%d]", jsonPath, j), sPath, u.Index(j), d, j) && u.Len() > minSize {
 				u.Set(reflect.AppendSlice(u.Slice(0, j), u.Slice(j+1, u.Len())))
 				j--
 			}
@@ -986,6 +995,7 @@ func (editor *settingsEditor) buildString(jsonPath string, f reflect.Value, d re
 		cSpec, okC := d.Tag.Lookup("combo")
 		cFunc, okCS := d.Tag.Lookup("comboSrc")
 		_, okPW := d.Tag.Lookup("password")
+		_, okMulti := d.Tag.Lookup("multi")
 
 		if okKey {
 			if imgui.ButtonV(base+"##"+jsonPath, vec2(-1, 0)) {
@@ -1209,7 +1219,11 @@ func (editor *settingsEditor) buildString(jsonPath string, f reflect.Value, d re
 				imgui.EndTable()
 			}
 		} else {
-			if inputText(jsonPath, &base) {
+			if okMulti {
+				if inputTextMulti(jsonPath, &base) {
+					f.SetString(base)
+				}
+			} else if inputText(jsonPath, &base) {
 				f.SetString(base)
 			}
 		}
