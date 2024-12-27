@@ -607,7 +607,7 @@ func (slider *Slider) SetDifficulty(diff *difficulty.Difficulty) {
 		slider.TickReverse[i] = p
 	}
 
-	slider.body = sliderrenderer.NewBody(slider.multiCurve, diff.Mods&difficulty.HardRock > 0, float32(slider.diff.CircleRadius))
+	slider.body = sliderrenderer.NewBody(slider.multiCurve, diff.Mods&difficulty.HardRock > 0, float32(slider.diff.CircleRadius), slider.RepeatCount%2 == 0)
 }
 
 func (slider *Slider) IsRetarded() bool {

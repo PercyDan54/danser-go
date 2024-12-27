@@ -57,6 +57,7 @@ type Body struct {
 
 	radius float32
 
+	reverse          bool
 	disposed         bool
 	distortionMatrix mgl32.Mat4
 
@@ -68,7 +69,7 @@ type Body struct {
 	capBuffer  []float32
 }
 
-func NewBody(curve *curves.MultiCurve, hardRock bool, hitCircleRadius float32) *Body {
+func NewBody(curve *curves.MultiCurve, hardRock bool, hitCircleRadius float32, reverse bool) *Body {
 	if capShader == nil {
 		InitRenderer()
 	}
@@ -76,6 +77,7 @@ func NewBody(curve *curves.MultiCurve, hardRock bool, hitCircleRadius float32) *
 	body := &Body{
 		distortionMatrix: mgl32.Ident4(),
 		radius:           hitCircleRadius,
+		reverse:          reverse,
 		headLength:       -1,
 		tailLength:       -1,
 		headIndex:        -1,
@@ -343,12 +345,6 @@ func (body *Body) DrawBase(headProgress, tailProgress float64, baseProjView mgl3
 		}
 	}
 
-	hPoint := head.pointAtLen(headLength)
-	tPoint := tail.pointAtLen(tailLength)
-
-	body.capBuffer[0], body.capBuffer[1] = hPoint.X, hPoint.Y
-	body.capBuffer[2], body.capBuffer[3] = tPoint.X, tPoint.Y
-
 	body.capVAO.SetData("points", 0, body.capBuffer)
 
 	prevIndices := body.sections[headIndex].prevIndices
@@ -389,6 +385,10 @@ func (body *Body) DrawBase(headProgress, tailProgress float64, baseProjView mgl3
 	body.capVAO.Bind()
 
 	for s, _ := range body.sections {
+		if (s < headIndex && !body.reverse) || (s > tailIndex && body.reverse) {
+			continue
+		}
+
 		head1 := body.sections[s]
 		tail1 := body.sections[s]
 
