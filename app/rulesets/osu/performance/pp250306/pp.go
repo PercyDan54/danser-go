@@ -75,7 +75,7 @@ func (pp *PPv2) Calculate(attribs api.Attributes, score api.PerfScore, diff *dif
 	pp.totalHits = score.CountGreat + score.CountOk + score.CountMeh + score.CountMiss
 	pp.totalSuccessfulHits = score.CountGreat + score.CountOk + score.CountMeh
 	pp.totalImperfectHits = score.CountOk + score.CountMeh + score.CountMiss
-	pp.effectiveMissCount = 0
+	pp.effectiveMissCount = float64(score.CountMiss)
 
 	pp.greatHitWindow = diff.Hit300U / diff.GetSpeed()
 	pp.okHitWindow = diff.Hit100U / diff.GetSpeed()
@@ -211,13 +211,13 @@ func (pp *PPv2) computeAimValue() float64 {
 	aimValue *= 1.0 + approachRateFactor*lengthBonus // Buff for longer maps with high AR.
 
 	// We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
-	if pp.diff.Mods.Active(difficulty.Hidden) {
+	if pp.diff.Mods.Active(difficulty.Hidden) || pp.diff.Mods.Active(difficulty.Traceable) {
 		aimValue *= 1.0 + 0.04*(12.0-pp.diff.ARReal)
 	}
 
 	aimValue *= pp.score.Accuracy
 	// It is important to also consider accuracy difficulty when doing that
-	aimValue *= 0.98 + math.Pow(pp.diff.ODReal, 2)/2500
+	aimValue *= 0.98 + math.Pow(max(0, pp.diff.ODReal), 2)/2500
 
 	return aimValue
 }
@@ -253,7 +253,7 @@ func (pp *PPv2) computeSpeedValue() float64 {
 
 	speedValue *= 1.0 + approachRateFactor*lengthBonus
 
-	if pp.diff.Mods.Active(difficulty.Hidden) {
+	if pp.diff.Mods.Active(difficulty.Hidden) || pp.diff.Mods.Active(difficulty.Traceable) {
 		speedValue *= 1.0 + 0.04*(12.0-pp.diff.ARReal)
 	}
 
@@ -284,7 +284,7 @@ func (pp *PPv2) computeAccuracyValue() float64 {
 	betterAccuracyPercentage := 0.0
 
 	if pp.amountHitObjectsWithAccuracy > 0 {
-		betterAccuracyPercentage = float64((pp.score.CountGreat-(pp.totalHits-pp.amountHitObjectsWithAccuracy))*6+pp.score.CountOk*2+pp.score.CountMeh) / (float64(pp.amountHitObjectsWithAccuracy) * 6)
+		betterAccuracyPercentage = float64((pp.score.CountGreat-max(pp.totalHits-pp.amountHitObjectsWithAccuracy, 0))*6+pp.score.CountOk*2+pp.score.CountMeh) / (float64(pp.amountHitObjectsWithAccuracy) * 6)
 	}
 
 	// It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points
@@ -299,7 +299,7 @@ func (pp *PPv2) computeAccuracyValue() float64 {
 	// Bonus for many hitcircles - it's harder to keep good accuracy up for longer
 	accuracyValue *= min(1.15, math.Pow(float64(pp.amountHitObjectsWithAccuracy)/1000.0, 0.3))
 
-	if pp.diff.Mods.Active(difficulty.Hidden) {
+	if pp.diff.Mods.Active(difficulty.Hidden) || pp.diff.Mods.Active(difficulty.Traceable) {
 		accuracyValue *= 1.08
 	}
 

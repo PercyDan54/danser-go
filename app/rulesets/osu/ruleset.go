@@ -140,13 +140,23 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 
 	diffPlayers := make([]*difficultyPlayer, 0, len(cursors))
 
-	for i, cursor := range cursors {
+	nonLazerReplays := false
+
+	for i := range cursors {
 		diff := diffs[i]
 
 		beatMap.CalculateStackLeniency(diff) // Calculate additional stack indexes for DA/EZ/HR/whatever that changes Preempt
 
 		diff.Mods = diff.Mods | (beatMap.Diff.Mods & difficulty.ScoreV2) // if beatmap has ScoreV2 mod, force it for all players
 		diff.Mods = diff.Mods | (beatMap.Diff.Mods & difficulty.Lazer)   // same for Lazer
+
+		if !diff.CheckModActive(difficulty.Lazer) {
+			nonLazerReplays = true
+		}
+	}
+
+	for i, cursor := range cursors {
+		diff := diffs[i]
 
 		player := &difficultyPlayer{cursor: cursor, diff: diff, maskedModString: diff.GetModStringMasked()}
 		diffPlayers = append(diffPlayers, player)
@@ -163,7 +173,11 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 		}
 
 		if ruleset.oppDiffs[player.maskedModString] == nil {
+			player.diff.DiffCalcMode = true // To use lazer's stack offset for stable plays without having to put LZ mod
+
 			ruleset.oppDiffs[player.maskedModString] = performance.GetDifficultyCalculator().CalculateStep(ruleset.beatMap.HitObjects, player.diff)
+
+			player.diff.DiffCalcMode = false
 
 			star := ruleset.oppDiffs[player.maskedModString][len(ruleset.oppDiffs[player.maskedModString])-1]
 
@@ -228,7 +242,7 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 		var sc scoreProcessor
 
 		if diff.CheckModActive(difficulty.Lazer) {
-			sc = newScoreV3Processor()
+			sc = newScoreV3Processor(nonLazerReplays)
 		} else if diff.CheckModActive(difficulty.ScoreV2) {
 			sc = newScoreV2Processor()
 		} else {
@@ -788,6 +802,7 @@ func (set *OsuRuleSet) GetFCPP(cursor *graphics.Cursor) api.PPv2Results {
 	apiScore.CountGreat += apiScore.CountMiss
 	apiScore.CountMiss = 0
 	apiScore.SliderBreaks = 0
+	apiScore.Accuracy = 1
 
 	rawScore := int64(apiScore.CountGreat*300 + apiScore.CountOk*100 + apiScore.CountMeh*50)
 	maxRawScore := int64(subSet.score.scoredObjects * 300)
@@ -799,8 +814,12 @@ func (set *OsuRuleSet) GetFCPP(cursor *graphics.Cursor) api.PPv2Results {
 			sEndScore = LegacySliderEnd.ScoreValueMod(subSet.player.diff.Mods)
 		}
 
-		apiScore.Accuracy = float64(rawScore+pointScore+int64(apiScore.SliderEnd)*sEndScore) / float64(maxRawScore+pointScore+int64(subSet.score.MaxSliderEnd)*sEndScore)
-	} else {
+		div := maxRawScore + pointScore + int64(subSet.score.MaxSliderEnd)*sEndScore
+
+		if div > 0 {
+			apiScore.Accuracy = float64(rawScore+pointScore+int64(apiScore.SliderEnd)*sEndScore) / float64(div)
+		}
+	} else if maxRawScore > 0 {
 		apiScore.Accuracy = float64(rawScore) / float64(maxRawScore)
 	}
 

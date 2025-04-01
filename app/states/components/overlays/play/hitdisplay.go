@@ -41,7 +41,7 @@ func NewHitDisplay(ruleset *osu.OsuRuleSet, cursor *graphics.Cursor) *HitDisplay
 		hit100Text:       "0",
 		hit50Text:        "0",
 		hitMissText:      "0",
-		sliderBreaksText: "",
+		sliderBreaksText: "0",
 	}
 
 	return aSprite
@@ -70,14 +70,9 @@ func (sprite *HitDisplay) Update(_ float64) {
 		sprite.hitMissText = strconv.Itoa(int(sprite.hitMiss))
 	}
 
-	if sprite.sliderBreaks != score.CountSB || sprite.sliderBreaksText == "" {
+	if sprite.sliderBreaks != score.CountSB {
 		sprite.sliderBreaks = score.CountSB
-		count := strconv.Itoa(int(sprite.sliderBreaks))
-		sb := "SB: " + count
-		if settings.Gameplay.HitCounter.Vertical {
-			sb = count
-		}
-		sprite.sliderBreaksText = sb
+		sprite.sliderBreaksText = strconv.Itoa(int(sprite.sliderBreaks))
 	}
 }
 
@@ -131,11 +126,7 @@ func (sprite *HitDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 	sprite.drawShadowed(batch, baseX+hSpacing*2, baseY+vSpacing*2, valueAlign, fontScale, hCS.ColorMiss, float32(alpha), sprite.hitMissText)
 
 	if hCS.ShowSliderBreaks {
-		if settings.Gameplay.HitCounter.Vertical {
-			sprite.drawShadowed(batch, baseX+hSpacing*3, baseY+vSpacing*3, valueAlign, fontScale, hCS.ColorSB, float32(alpha), sprite.sliderBreaksText)
-		} else {
-			sprite.drawShadowed(batch, baseX, baseY+hSpacing*0.5, valueAlign, fontScale, hCS.ColorSB, float32(alpha), sprite.sliderBreaksText)
-		}
+		sprite.drawShadowed(batch, baseX+hSpacing*3, baseY+vSpacing*3, valueAlign, fontScale, hCS.ColorSB, float32(alpha), sprite.sliderBreaksText)
 	}
 
 	batch.ResetTransform()

@@ -68,11 +68,7 @@ func (skill *Skill) Process(current *preprocessing.DifficultyObject) {
 		skill.currentSectionEnd = math.Ceil(current.StartTime/skill.SectionLength) * skill.SectionLength
 	}
 
-	for current.StartTime > skill.currentSectionEnd {
-		skill.saveCurrentPeak()
-		skill.startNewSectionFrom(skill.currentSectionEnd, current)
-		skill.currentSectionEnd += skill.SectionLength
-	}
+	skill.processSectionEnd(current)
 
 	currentStrain := skill.StrainValueOf(current)
 
@@ -91,6 +87,26 @@ func (skill *Skill) Process(current *preprocessing.DifficultyObject) {
 	}
 
 	skill.lastDifficulty = skill.difficulty
+}
+
+func (skill *Skill) processSectionEnd(nextObj *preprocessing.DifficultyObject) {
+	for nextObj.StartTime > skill.currentSectionEnd {
+		sectionsLeft := math.Floor((nextObj.StartTime - skill.currentSectionEnd) / skill.SectionLength)
+
+		if skill.currentSectionPeak == 0 && sectionsLeft > 10 { // skip for maps with huge distances between objects
+			newPeaks := make([]float64, len(skill.strainPeaks)+int(sectionsLeft))
+			copy(newPeaks, skill.strainPeaks)
+			skill.strainPeaks = newPeaks // just add it to temporal db, we don't need to add
+
+			skill.currentSectionEnd += skill.SectionLength * sectionsLeft
+
+			continue
+		}
+
+		skill.saveCurrentPeak()
+		skill.startNewSectionFrom(skill.currentSectionEnd, nextObj)
+		skill.currentSectionEnd += skill.SectionLength
+	}
 }
 
 func (skill *Skill) GetCurrentStrainPeaks() []float64 {
@@ -125,13 +141,15 @@ func (skill *Skill) difficultyValue() float64 {
 
 	lowest := strains[len(strains)-1]
 
-	for i := range min(len(strains), skill.ReducedSectionCount) {
+	sectionsReduced := min(len(strains), skill.ReducedSectionCount)
+
+	for i := range sectionsReduced {
 		strains[len(strains)-1-i] *= skill.peakWeights[i]
 		lowest = min(lowest, strains[len(strains)-1-i])
 	}
 
 	// Search for lowest strain that's higher or equal than lowest reduced strain to avoid unnecessary sorting
-	idx, _ := slices.BinarySearch(strains, lowest)
+	idx, _ := slices.BinarySearch(strains[:len(strains)-sectionsReduced], lowest)
 	slices.Sort(strains[idx:])
 
 	lastDiff := -math.MaxFloat64
@@ -185,7 +203,10 @@ func (skill *Skill) CountDifficultStrains() float64 {
 
 func (skill *Skill) saveCurrentPeak() {
 	skill.strainPeaks = append(skill.strainPeaks, skill.currentSectionPeak)
-	skill.strainPeaksSorted.Add(skill.currentSectionPeak)
+
+	if skill.currentSectionPeak > 0 {
+		skill.strainPeaksSorted.Add(skill.currentSectionPeak)
+	}
 }
 
 func (skill *Skill) startNewSectionFrom(end float64, current *preprocessing.DifficultyObject) {

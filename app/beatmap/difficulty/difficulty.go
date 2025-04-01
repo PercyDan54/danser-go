@@ -32,12 +32,17 @@ type Difficulty struct {
 	baseCS float64
 	baseHP float64
 
-	PreemptU      float64
-	Preempt       float64
-	TimeFadeIn    float64
+	PreemptU   float64
+	Preempt    float64
+	TimeFadeIn float64
+
 	CircleRadiusU float64
 	CircleRadius  float64
-	Mods          Modifier
+
+	CircleScaleL  float32
+	CircleRadiusL float64
+
+	Mods Modifier
 
 	Hit50U  float64
 	Hit100U float64
@@ -60,6 +65,8 @@ type Difficulty struct {
 
 	modSettings map[reflect.Type]any
 	adjustPitch bool
+
+	DiffCalcMode bool
 }
 
 func NewDifficulty(hp, cs, od, ar float64) *Difficulty {
@@ -119,6 +126,9 @@ func (diff *Difficulty) calculate() {
 	diff.CircleRadiusU = DifficultyRate(cs, 54.4, 32, 9.6)
 	diff.CircleRadius = diff.CircleRadiusU * 1.00041 //some weird allowance osu has
 
+	diff.CircleScaleL = (1.0 - 0.7*float32((cs-5)/5)) / 2 * 1.00041
+	diff.CircleRadiusL = float64(diff.CircleScaleL) * 64
+
 	diff.PreemptU = DifficultyRate(ar, 1800, 1200, 450)
 	diff.Preempt = math.Floor(diff.PreemptU)
 
@@ -155,7 +165,7 @@ func (diff *Difficulty) calculate() {
 	}
 
 	diff.ARReal = DiffFromRate(diff.GetModifiedTime(diff.PreemptU), 1800, 1200, 450)
-	diff.ODReal = DiffFromRate(diff.GetModifiedTime(diff.Hit300U), 80, 50, 20)
+	diff.ODReal = (80 - diff.GetModifiedTime(diff.Hit300U)) / 6 //DiffFromRate(diff.GetModifiedTime(diff.Hit300U), 80, 50, 20)
 }
 
 func cMax(cond bool, a, b float64) float64 {
@@ -363,6 +373,18 @@ func (diff *Difficulty) GetPitch() float64 {
 	}
 
 	return 1
+}
+
+func (diff *Difficulty) GetRadius() float32 {
+	if diff.Mods&Lazer > 0 {
+		return float32(diff.CircleRadiusL)
+	}
+
+	if diff.Mods&Relax2 > 0 {
+		return 100
+	}
+
+	return float32(diff.CircleRadius)
 }
 
 func (diff *Difficulty) GetScoreMultiplier() float64 {
@@ -618,29 +640,29 @@ func (diff *Difficulty) Equals(diff2 *Difficulty) bool {
 	return true
 }
 
-func DifficultyRate(diff, min, mid, max float64) float64 {
+func DifficultyRate(diff, minV, midV, maxV float64) float64 {
 	diff = float64(float32(diff))
 
 	if diff > 5 {
-		return mid + (max-mid)*(diff-5)/5
+		return midV + (maxV-midV)*(diff-5)/5
 	}
 
 	if diff < 5 {
-		return mid - (mid-min)*(5-diff)/5
+		return midV - (midV-minV)*(5-diff)/5
 	}
 
-	return mid
+	return midV
 }
 
-func DiffFromRate(rate, min, mid, max float64) float64 {
+func DiffFromRate(rate, minV, midV, maxV float64) float64 {
 	rate = float64(float32(rate))
 
-	minStep := (min - mid) / 5
-	maxStep := (mid - max) / 5
+	minVStep := (minV - midV) / 5
+	maxVStep := (midV - maxV) / 5
 
-	if rate > mid {
-		return -(rate - min) / minStep
+	if rate > midV {
+		return -(rate - minV) / minVStep
 	}
 
-	return 5.0 - (rate-mid)/maxStep
+	return 5.0 - (rate-midV)/maxVStep
 }
