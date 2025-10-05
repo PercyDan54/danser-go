@@ -3,7 +3,16 @@ package launcher
 import (
 	"cmp"
 	"fmt"
+	"math"
+	"math/rand"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+	"unicode"
+
 	"github.com/AllenDang/cimgui-go/imgui"
+
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/bass"
@@ -13,13 +22,6 @@ import (
 	"github.com/wieku/danser-go/framework/platform"
 	"github.com/wieku/danser-go/framework/qpc"
 	"github.com/wieku/danser-go/framework/util"
-	"math"
-	"math/rand"
-	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
-	"unicode"
 )
 
 type SortBy int

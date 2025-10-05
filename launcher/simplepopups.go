@@ -1,12 +1,14 @@
 package launcher
 
 import (
+	"strconv"
+
 	"github.com/AllenDang/cimgui-go/imgui"
+
 	"github.com/wieku/danser-go/build"
 	"github.com/wieku/danser-go/framework/graphics/texture"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/platform"
-	"strconv"
 )
 
 func drawSpeedMenu(bld *builder) {

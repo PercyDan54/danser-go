@@ -2,7 +2,13 @@ package osu
 
 import (
 	"fmt"
+	"log"
+	"math"
+	"sort"
+	"strings"
+
 	"github.com/olekukonko/tablewriter"
+
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/beatmap/objects"
@@ -11,10 +17,6 @@ import (
 	"github.com/wieku/danser-go/app/rulesets/osu/performance/api"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/app/utils"
-	"log"
-	"math"
-	"sort"
-	"strings"
 )
 
 const Tolerance2B = 3
@@ -95,10 +97,10 @@ type subSet struct {
 
 	ppv2 api.IPerformanceCalculator
 
-	recoveries int
-	failed     bool
-	sdpfFail   bool
-	forceFail  bool
+	recoveries  int
+	failed      bool
+	sdpfFail    bool
+	replayEnded bool
 
 	potentialCombo int
 }
@@ -740,16 +742,16 @@ func (set *OsuRuleSet) PostHit(time int64, object HitObject, player *difficultyP
 func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 	subSet := set.cursors[player.cursor]
 
-	if player.cursor.IsReplay && settings.Gameplay.IgnoreFailsInReplays {
+	if player.cursor.IsReplay && (settings.Gameplay.IgnoreFailsInReplays || !subSet.replayEnded) {
 		return
 	}
 
-	if !subSet.forceFail && player.diff.CheckModActive(difficulty.NoFail|difficulty.Relax|difficulty.Relax2) {
+	if !subSet.replayEnded && player.diff.CheckModActive(difficulty.NoFail|difficulty.Relax|difficulty.Relax2) {
 		return
 	}
 
 	// EZ mod gives 2 additional lives
-	if subSet.recoveries > 0 && !subSet.sdpfFail && !subSet.forceFail {
+	if subSet.recoveries > 0 && !subSet.sdpfFail && !subSet.replayEnded {
 		subSet.hp.IncreaseRelative(0.8, false)
 		subSet.recoveries--
 
@@ -767,11 +769,7 @@ func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 func (set *OsuRuleSet) PlayerStopped(cursor *graphics.Cursor, time int64) {
 	subSet := set.cursors[cursor]
 
-	// Let's believe in hp system. 1ms just in case for slider calculation inconsistencies
-	if time < int64(set.beatMap.HitObjects[len(set.beatMap.HitObjects)-1].GetEndTime())-1 /*+subSet.player.diff.Hit50+20*/ {
-		subSet.forceFail = true
-		subSet.hp.Increase(-10000, true)
-	}
+	subSet.replayEnded = true
 }
 
 func (set *OsuRuleSet) SetListener(listener hitListener) {

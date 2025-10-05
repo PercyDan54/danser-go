@@ -2,9 +2,18 @@ package states
 
 import (
 	"fmt"
+	"log"
+	"math"
+	"math/rand"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/dustin/go-humanize"
-	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
+
 	"github.com/wieku/danser-go/app/audio"
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
@@ -13,7 +22,6 @@ import (
 	"github.com/wieku/danser-go/app/dance"
 	"github.com/wieku/danser-go/app/discord"
 	"github.com/wieku/danser-go/app/graphics"
-	"github.com/wieku/danser-go/app/input"
 	"github.com/wieku/danser-go/app/osuapi"
 	"github.com/wieku/danser-go/app/rulesets/osu"
 	"github.com/wieku/danser-go/app/settings"
@@ -35,15 +43,9 @@ import (
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/scaling"
 	"github.com/wieku/danser-go/framework/math/vector"
+	"github.com/wieku/danser-go/framework/platform/gcontext"
 	"github.com/wieku/danser-go/framework/profiler"
 	"github.com/wieku/danser-go/framework/qpc"
-	"log"
-	"math"
-	"math/rand"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const windowsOffset = 15
@@ -532,7 +534,7 @@ func NewPlayer(beatMap *beatmap.BeatMap) *Player {
 	goroutines.RunOS(func() {
 		var lastTimeNano = qpc.GetNanoTime()
 
-		for !input.Win.ShouldClose() {
+		for !gcontext.ShouldClose() {
 			currentTimeNano := qpc.GetNanoTime()
 
 			delta := float64(currentTimeNano-lastTimeNano) / 1000000.0
@@ -1162,7 +1164,7 @@ func (player *Player) drawDebug() {
 
 		if settings.DEBUG || settings.Graphics.ShowFPS || settings.PerfGraph {
 			if settings.PerfGraph {
-				if profRes != nil && input.Win.GetKey(glfw.KeyLeftShift) != glfw.Press {
+				if profRes != nil && gcontext.GetKeyState(sdl.K_LSHIFT) != gcontext.Press {
 					root := profRes.TimeTotal
 					sched := profRes.Nodes[0].TimeTotal
 					input := profRes.Nodes[1].TimeTotal

@@ -1,6 +1,9 @@
 package objects
 
 import (
+	"math"
+	"strconv"
+
 	"github.com/wieku/danser-go/app/audio"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/settings"
@@ -12,11 +15,12 @@ import (
 	"github.com/wieku/danser-go/framework/math/animation/easing"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"math"
-	"strconv"
 )
 
-const defaultCircleName = "hit"
+const (
+	defaultCircleName    = "hit"
+	defaultReverseBounce = 300
+)
 
 type Circle struct {
 	*HitObject
@@ -193,6 +197,10 @@ func (circle *Circle) SetDifficulty(diff *difficulty.Difficulty) {
 		}
 	}
 
+	if circle.SliderPointEnd {
+		return
+	}
+
 	if circle.SliderPoint && !circle.SliderPointStart {
 		circle.reverseArrow = sprite.NewSpriteSingle(skin.GetTexture("reversearrow"), 0, vector.NewVec2d(0, 0), vector.Centre)
 		circle.reverseArrow.SetAlpha(0)
@@ -202,13 +210,17 @@ func (circle *Circle) SetDifficulty(diff *difficulty.Difficulty) {
 
 		circle.sprites = append(circle.sprites, circle.reverseArrow)
 
-		for t := circle.bounceStartTime; t < endTime; t += 300 {
-			length := min(300, endTime-t)
-			circle.reverseArrow.AddTransform(animation.NewSingleTransform(animation.Scale, easing.Linear, t, t+length, 1.3, 1.0))
+		rCount := int((endTime - circle.bounceStartTime) / defaultReverseBounce)
 
-			if skin.GetInfo().Version < 2 {
-				circle.reverseArrow.AddTransform(animation.NewSingleTransform(animation.Rotate, easing.Linear, t, t+length, 6*math.Pi/180, -6*math.Pi/180))
-			}
+		if rCount > 0 {
+			setReverse(circle.reverseArrow, circle.bounceStartTime, defaultReverseBounce, rCount)
+		}
+
+		rStart := circle.bounceStartTime + float64(rCount)*defaultReverseBounce
+		rTime := endTime - rStart
+
+		if rCount == 0 || rTime > 5 {
+			setReverse(circle.reverseArrow, rStart, rTime, 1)
 		}
 	} else {
 		circle.approachCircle = sprite.NewSpriteSingle(skin.GetTexture("approachcircle"), 0, vector.NewVec2d(0, 0), vector.Centre)
@@ -222,6 +234,20 @@ func (circle *Circle) SetDifficulty(diff *difficulty.Difficulty) {
 
 			circle.approachCircle.AddTransform(animation.NewSingleTransform(animation.Scale, easing.Linear, startTime, endTime, 4.0, 1.0))
 		}
+	}
+}
+
+func setReverse(arrow *sprite.Sprite, start float64, length float64, loops int) {
+	scale := animation.NewSingleTransform(animation.Scale, easing.Linear, start, start+length, 1.3, 1.0)
+	scale.SetLoop(loops, length)
+
+	arrow.AddTransform(scale)
+
+	if skin.GetInfo().Version < 2 {
+		rotate := animation.NewSingleTransform(animation.Rotate, easing.Linear, start, start+length, 6*math.Pi/180, -6*math.Pi/180)
+		rotate.SetLoop(loops, length)
+
+		arrow.AddTransform(rotate)
 	}
 }
 
@@ -242,7 +268,7 @@ func (circle *Circle) Arm(clicked bool, time float64) {
 		endScale = 1.8
 	}
 
-	if clicked && !circle.diff.CheckModActive(difficulty.Hidden) {
+	if clicked && !circle.diff.CheckModActive(difficulty.Hidden) && !circle.diff.CheckModActive(difficulty.Traceable) {
 		endTime := startTime + difficulty.HitFadeOut
 		circle.hitCircle.AddTransform(animation.NewSingleTransform(animation.Scale, easing.OutQuad, startTime, endTime, 1.0, endScale))
 		circle.hitCircleOverlay.AddTransform(animation.NewSingleTransform(animation.Scale, easing.OutQuad, startTime, endTime, 1.0, endScale))
@@ -306,18 +332,22 @@ func (circle *Circle) Draw(time float64, color color2.Color, batch *batch.QuadBa
 
 	circle.hitCircle.SetColor(skin.GetColor(int(circle.ComboSet), int(circle.ComboSetHax), color))
 
-	circle.hitCircle.Draw(time, batch)
+	drawCircle := !circle.SliderPoint || circle.SliderPointStart || settings.Objects.Sliders.DrawEndCircles
+
+	if drawCircle {
+		circle.hitCircle.Draw(time, batch)
+	}
 
 	if settings.DIVIDES < settings.Objects.Colors.MandalaTexturesTrigger {
-		if !skin.GetInfo().HitCircleOverlayAboveNumber {
+		if !skin.GetInfo().HitCircleOverlayAboveNumber && drawCircle {
 			circle.hitCircleOverlay.Draw(time, batch)
 		}
 
 		if !circle.SliderPoint || circle.SliderPointStart {
-			if settings.DIVIDES < 2 && settings.Objects.DrawComboNumbers {
+			if settings.DIVIDES < 2 && settings.Objects.DrawComboNumbers && drawCircle {
 				circle.comboText.Draw(0, batch)
 			}
-		} else if !circle.SliderPointEnd {
+		} else if !circle.SliderPointEnd && settings.Objects.Sliders.DrawReverseArrows {
 			prevRotation := batch.GetRotation()
 			batch.SetRotation(circle.ArrowRotation)
 			//circle.reverseArrow.SetRotation(circle.ArrowRotation)
@@ -329,7 +359,7 @@ func (circle *Circle) Draw(time float64, color color2.Color, batch *batch.QuadBa
 		batch.SetTranslation(position.Copy64())
 		batch.SetColor(1, 1, 1, alpha)
 
-		if skin.GetInfo().HitCircleOverlayAboveNumber {
+		if skin.GetInfo().HitCircleOverlayAboveNumber && drawCircle {
 			circle.hitCircleOverlay.Draw(time, batch)
 		}
 	}

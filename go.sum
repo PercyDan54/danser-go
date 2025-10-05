@@ -6,6 +6,8 @@ github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf h1:FPsprx82rdrX2j
 github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf/go.mod h1:peYoMncQljjNS6tZwI9WVyQB3qZS6u79/N3mBOcnd3I=
 github.com/Wieku/cimgui-go v1.0.0 h1:ifHeGWgKTtssXKE//aXnzmCjevhsZHSikOHJFHI5tJc=
 github.com/Wieku/cimgui-go v1.0.0/go.mod h1:+4aKJCU428991n2MDe/8W7ndFq+NNk5A3fpaRIcjg+w=
+github.com/Zyko0/purego-gen v0.0.0-20250727121216-3bcd331a1e0c h1:3z1BdpfvUbaP7oXjPabl7STN7zz88S432hZJ8M095kI=
+github.com/Zyko0/purego-gen v0.0.0-20250727121216-3bcd331a1e0c/go.mod h1:xpUxPkAb7v0Ffn/NGp1XpD+tZly4dpSPI7DTAFT37es=
 github.com/ananagame/rich-go v0.0.0-20200319172754-527649f3d36d/go.mod h1:U9YxCfeNzWcDUs4O8lQfUyz9txKHTojVykpQicaZhyU=
 github.com/ananagame/rich-go v0.0.0-20210525072106-9d45f0e06959 h1:JKgYojLXqnVzgJ3SwLsxMm7GvKtZa/KryMO/mTAukEM=
 github.com/ananagame/rich-go v0.0.0-20210525072106-9d45f0e06959/go.mod h1:U9YxCfeNzWcDUs4O8lQfUyz9txKHTojVykpQicaZhyU=
@@ -15,14 +17,14 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/ebitengine/purego v0.9.0-alpha.2.0.20250124174847-29f0104e3c2b h1:/KAOJuXR4cWaQIiA9xBMDSQJ1JXq5gZHdSK8prrtUqQ=
+github.com/ebitengine/purego v0.9.0-alpha.2.0.20250124174847-29f0104e3c2b/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
 github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/go-gl/gl v0.0.0-20210813123233-e4099ee2221f h1:s0O46d8fPwk9kU4k1jj76wBquMVETx7uveQD9MCIQoU=
 github.com/go-gl/gl v0.0.0-20210813123233-e4099ee2221f/go.mod h1:wjpnOv6ONl2SuJSxqCPVaPZibGFdSci9HFocT9qtVYM=
-github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b h1:GgabKamyOYguHqHjSkDACcgoPIz3w0Dis/zJ1wyHHHU=
-github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/mathgl v1.2.0 h1:v2eOj/y1B2afDxF6URV1qCYmo1KW08lAMtTbOn3KXCY=
 github.com/go-gl/mathgl v1.2.0/go.mod h1:pf9+b5J3LFP7iZ4XXaVzZrCle0Q/vNpB/vDe5+3ulRE=
 github.com/go-ole/go-ole v1.2.6 h1:/Fpf6oFPoeFik9ty7siob0G6Ke8QvQEuVcuChpwXzpY=
@@ -79,6 +81,8 @@ github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+F
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
 github.com/wieku/dialog v1.0.0 h1:ZjdgrEkDZVFa98716uJG2rV0pcg32/8l+wmZ+UmeTZo=
 github.com/wieku/dialog v1.0.0/go.mod h1:WwGLImngYk6muW1mZ84t7VD9LWUX6yCtVJbTXk75r8o=
+github.com/wieku/go-sdl3 v1.0.1 h1:2umYYL6WjGelQT7WxOxYA9wX9MZxXNaYDz/q5AAqEHE=
+github.com/wieku/go-sdl3 v1.0.1/go.mod h1:a+48Psmm0D/PuXXB9CW0u9faFMxhNoWvZdfSXuKoD58=
 github.com/wieku/rplpa v1.0.2 h1:uNOjUdRUZOaZyEX/PwrOG9GU8rTApEz1luOGpUeAGZM=
 github.com/wieku/rplpa v1.0.2/go.mod h1:S/fVKNzah7m3SaObos2wZk6qCbINSa0HZYx9elj1rYo=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=

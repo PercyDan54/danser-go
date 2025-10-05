@@ -2,13 +2,15 @@ package difficulty
 
 import (
 	"fmt"
-	"github.com/wieku/danser-go/framework/math/mutils"
-	"github.com/wieku/rplpa"
 	"math"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/wieku/rplpa"
+
+	"github.com/wieku/danser-go/framework/math/mutils"
 )
 
 const (
@@ -134,13 +136,13 @@ func (diff *Difficulty) calculate() {
 
 	diff.TimeFadeIn = HitFadeIn * min(1, diff.PreemptU/450)
 
-	diff.Hit50U = DifficultyRate(od, 200, 150, 100)
-	diff.Hit100U = DifficultyRate(od, 140, 100, 60)
-	diff.Hit300U = DifficultyRate(od, 80, 50, 20)
+	diff.Hit50U = math.Floor(DifficultyRate(od, 200, 150, 100)) - 0.5
+	diff.Hit100U = math.Floor(DifficultyRate(od, 140, 100, 60)) - 0.5
+	diff.Hit300U = math.Floor(DifficultyRate(od, 80, 50, 20)) - 0.5
 
-	diff.Hit50 = int64(diff.Hit50U)
-	diff.Hit100 = int64(diff.Hit100U)
-	diff.Hit300 = int64(diff.Hit300U)
+	diff.Hit50 = int64(DifficultyRate(od, 200, 150, 100))
+	diff.Hit100 = int64(DifficultyRate(od, 140, 100, 60))
+	diff.Hit300 = int64(DifficultyRate(od, 80, 50, 20))
 
 	diff.SpinnerRatio = DifficultyRate(od, 3, 5, 7.5)
 	diff.LzSpinnerMinRPS = DifficultyRate(od, 90, 150, 225) / 60
@@ -165,7 +167,7 @@ func (diff *Difficulty) calculate() {
 	}
 
 	diff.ARReal = DiffFromRate(diff.GetModifiedTime(diff.PreemptU), 1800, 1200, 450)
-	diff.ODReal = (80 - diff.GetModifiedTime(diff.Hit300U)) / 6 //DiffFromRate(diff.GetModifiedTime(diff.Hit300U), 80, 50, 20)
+	diff.ODReal = (79.5 - diff.GetModifiedTime(diff.Hit300U)) / 6 //DiffFromRate(diff.GetModifiedTime(diff.Hit300U), 80, 50, 20)
 }
 
 func cMax(cond bool, a, b float64) float64 {

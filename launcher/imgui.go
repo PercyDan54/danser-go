@@ -6,10 +6,10 @@ package launcher
 import "C"
 import (
 	"github.com/AllenDang/cimgui-go/imgui"
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/go-gl/gl/v3.3-core/gl"
-	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
-	"github.com/wieku/danser-go/app/input"
+
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/assets"
 	"github.com/wieku/danser-go/framework/graphics/attribute"
@@ -19,6 +19,9 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/texture"
 	"github.com/wieku/danser-go/framework/graphics/viewport"
 	"github.com/wieku/danser-go/framework/math/math32"
+	"github.com/wieku/danser-go/framework/platform/gcontext"
+	"github.com/wieku/danser-go/framework/qpc"
+
 	"log"
 	"runtime"
 	"unsafe"
@@ -59,7 +62,7 @@ type scrollContainer struct {
 
 var scrollDeltas = make(map[imgui.ID]scrollContainer)
 
-func SetupImgui(win *glfw.Window) {
+func SetupImgui() {
 	log.Println("Imgui setup")
 
 	context = imgui.CreateContext()
@@ -180,274 +183,298 @@ func SetupImgui(win *glfw.Window) {
 
 	ibo = buffer.NewIndexBufferObject(100000)
 
-	win.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
-		ImIO.AddMouseWheelDelta(float32(xoff), float32(yoff))
+	gcontext.RegisterListener(func(event gcontext.ScrollEvent) {
+		ImIO.AddMouseWheelDelta(-event.X, event.Y)
 	})
 
-	input.Win.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-		input.CallListeners(w, key, scancode, action, mods)
-
-		if action != glfw.Press && action != glfw.Release {
+	gcontext.RegisterListener(func(event gcontext.KeyEvent) {
+		if event.Action == gcontext.Repeat {
 			return
 		}
 
-		if nMods := keyToModifier(key); nMods > 0 {
-			if action == glfw.Press {
-				mods = mods | nMods
-			} else {
-				mods = mods & (^nMods)
-			}
-		}
+		sdlUpdateKeyModifiers(event.Mod)
 
-		updateKeyModifiers(mods)
-
-		iKey := glfwKeyToImGuiKey(key)
-
-		ImIO.AddKeyEvent(iKey, action == glfw.Press)
+		iKey := sdlKeyToImGuiKey(event.Key, event.Scancode)
+		ImIO.AddKeyEvent(iKey, event.Action == gcontext.Press)
 	})
 
-	input.Win.SetCharCallback(func(w *glfw.Window, char rune) {
-		ImIO.AddInputCharactersUTF8(string(char))
+	gcontext.RegisterListener(func(event gcontext.CharEvent) {
+		ImIO.AddInputCharactersUTF8(event.Text)
 	})
 }
 
-func glfwKeyToImGuiKey(k glfw.Key) imgui.Key {
-	switch k {
-	case glfw.KeyTab:
-		return imgui.KeyTab
-	case glfw.KeyLeft:
-		return imgui.KeyLeftArrow
-	case glfw.KeyRight:
-		return imgui.KeyRightArrow
-	case glfw.KeyUp:
-		return imgui.KeyUpArrow
-	case glfw.KeyDown:
-		return imgui.KeyDownArrow
-	case glfw.KeyPageUp:
-		return imgui.KeyPageUp
-	case glfw.KeyPageDown:
-		return imgui.KeyPageDown
-	case glfw.KeyHome:
-		return imgui.KeyHome
-	case glfw.KeyEnd:
-		return imgui.KeyEnd
-	case glfw.KeyInsert:
-		return imgui.KeyInsert
-	case glfw.KeyDelete:
-		return imgui.KeyDelete
-	case glfw.KeyBackspace:
-		return imgui.KeyBackspace
-	case glfw.KeySpace:
-		return imgui.KeySpace
-	case glfw.KeyEnter:
-		return imgui.KeyEnter
-	case glfw.KeyEscape:
-		return imgui.KeyEscape
-	case glfw.KeyApostrophe:
-		return imgui.KeyApostrophe
-	case glfw.KeyComma:
-		return imgui.KeyComma
-	case glfw.KeyMinus:
-		return imgui.KeyMinus
-	case glfw.KeyPeriod:
-		return imgui.KeyPeriod
-	case glfw.KeySlash:
-		return imgui.KeySlash
-	case glfw.KeySemicolon:
-		return imgui.KeySemicolon
-	case glfw.KeyEqual:
-		return imgui.KeyEqual
-	case glfw.KeyLeftBracket:
-		return imgui.KeyLeftBracket
-	case glfw.KeyBackslash:
-		return imgui.KeyBackslash
-	case glfw.KeyRightBracket:
-		return imgui.KeyRightBracket
-	case glfw.KeyGraveAccent:
-		return imgui.KeyGraveAccent
-	case glfw.KeyCapsLock:
-		return imgui.KeyCapsLock
-	case glfw.KeyScrollLock:
-		return imgui.KeyScrollLock
-	case glfw.KeyNumLock:
-		return imgui.KeyNumLock
-	case glfw.KeyPrintScreen:
-		return imgui.KeyPrintScreen
-	case glfw.KeyPause:
-		return imgui.KeyPause
-	case glfw.KeyKP0:
+func sdlKeyToImGuiKey(keycode sdl.Keycode, scancode sdl.Scancode) imgui.Key {
+	// Keypad doesn't have individual key values in SDL3
+	switch scancode {
+	case sdl.SCANCODE_KP_0:
 		return imgui.KeyKeypad0
-	case glfw.KeyKP1:
+	case sdl.SCANCODE_KP_1:
 		return imgui.KeyKeypad1
-	case glfw.KeyKP2:
+	case sdl.SCANCODE_KP_2:
 		return imgui.KeyKeypad2
-	case glfw.KeyKP3:
+	case sdl.SCANCODE_KP_3:
 		return imgui.KeyKeypad3
-	case glfw.KeyKP4:
+	case sdl.SCANCODE_KP_4:
 		return imgui.KeyKeypad4
-	case glfw.KeyKP5:
+	case sdl.SCANCODE_KP_5:
 		return imgui.KeyKeypad5
-	case glfw.KeyKP6:
+	case sdl.SCANCODE_KP_6:
 		return imgui.KeyKeypad6
-	case glfw.KeyKP7:
+	case sdl.SCANCODE_KP_7:
 		return imgui.KeyKeypad7
-	case glfw.KeyKP8:
+	case sdl.SCANCODE_KP_8:
 		return imgui.KeyKeypad8
-	case glfw.KeyKP9:
+	case sdl.SCANCODE_KP_9:
 		return imgui.KeyKeypad9
-	case glfw.KeyKPDecimal:
+	case sdl.SCANCODE_KP_PERIOD:
 		return imgui.KeyKeypadDecimal
-	case glfw.KeyKPDivide:
+	case sdl.SCANCODE_KP_DIVIDE:
 		return imgui.KeyKeypadDivide
-	case glfw.KeyKPMultiply:
+	case sdl.SCANCODE_KP_MULTIPLY:
 		return imgui.KeyKeypadMultiply
-	case glfw.KeyKPSubtract:
+	case sdl.SCANCODE_KP_MINUS:
 		return imgui.KeyKeypadSubtract
-	case glfw.KeyKPAdd:
+	case sdl.SCANCODE_KP_PLUS:
 		return imgui.KeyKeypadAdd
-	case glfw.KeyKPEnter:
+	case sdl.SCANCODE_KP_ENTER:
 		return imgui.KeyKeypadEnter
-	case glfw.KeyKPEqual:
+	case sdl.SCANCODE_KP_EQUALS:
 		return imgui.KeyKeypadEqual
-	case glfw.KeyLeftShift:
-		return imgui.KeyLeftShift
-	case glfw.KeyLeftControl:
-		return imgui.KeyLeftCtrl
-	case glfw.KeyLeftAlt:
-		return imgui.KeyLeftAlt
-	case glfw.KeyLeftSuper:
-		return imgui.KeyLeftSuper
-	case glfw.KeyRightShift:
-		return imgui.KeyRightShift
-	case glfw.KeyRightControl:
-		return imgui.KeyRightCtrl
-	case glfw.KeyRightAlt:
-		return imgui.KeyRightAlt
-	case glfw.KeyRightSuper:
-		return imgui.KeyRightSuper
-	case glfw.KeyMenu:
-		return imgui.KeyMenu
-	case glfw.Key0:
-		return imgui.Key0
-	case glfw.Key1:
-		return imgui.Key1
-	case glfw.Key2:
-		return imgui.Key2
-	case glfw.Key3:
-		return imgui.Key3
-	case glfw.Key4:
-		return imgui.Key4
-	case glfw.Key5:
-		return imgui.Key5
-	case glfw.Key6:
-		return imgui.Key6
-	case glfw.Key7:
-		return imgui.Key7
-	case glfw.Key8:
-		return imgui.Key8
-	case glfw.Key9:
-		return imgui.Key9
-	case glfw.KeyA:
-		return imgui.KeyA
-	case glfw.KeyB:
-		return imgui.KeyB
-	case glfw.KeyC:
-		return imgui.KeyC
-	case glfw.KeyD:
-		return imgui.KeyD
-	case glfw.KeyE:
-		return imgui.KeyE
-	case glfw.KeyF:
-		return imgui.KeyF
-	case glfw.KeyG:
-		return imgui.KeyG
-	case glfw.KeyH:
-		return imgui.KeyH
-	case glfw.KeyI:
-		return imgui.KeyI
-	case glfw.KeyJ:
-		return imgui.KeyJ
-	case glfw.KeyK:
-		return imgui.KeyK
-	case glfw.KeyL:
-		return imgui.KeyL
-	case glfw.KeyM:
-		return imgui.KeyM
-	case glfw.KeyN:
-		return imgui.KeyN
-	case glfw.KeyO:
-		return imgui.KeyO
-	case glfw.KeyP:
-		return imgui.KeyP
-	case glfw.KeyQ:
-		return imgui.KeyQ
-	case glfw.KeyR:
-		return imgui.KeyR
-	case glfw.KeyS:
-		return imgui.KeyS
-	case glfw.KeyT:
-		return imgui.KeyT
-	case glfw.KeyU:
-		return imgui.KeyU
-	case glfw.KeyV:
-		return imgui.KeyV
-	case glfw.KeyW:
-		return imgui.KeyW
-	case glfw.KeyX:
-		return imgui.KeyX
-	case glfw.KeyY:
-		return imgui.KeyY
-	case glfw.KeyZ:
-		return imgui.KeyZ
-	case glfw.KeyF1:
-		return imgui.KeyF1
-	case glfw.KeyF2:
-		return imgui.KeyF2
-	case glfw.KeyF3:
-		return imgui.KeyF3
-	case glfw.KeyF4:
-		return imgui.KeyF4
-	case glfw.KeyF5:
-		return imgui.KeyF5
-	case glfw.KeyF6:
-		return imgui.KeyF6
-	case glfw.KeyF7:
-		return imgui.KeyF7
-	case glfw.KeyF8:
-		return imgui.KeyF8
-	case glfw.KeyF9:
-		return imgui.KeyF9
-	case glfw.KeyF10:
-		return imgui.KeyF10
-	case glfw.KeyF11:
-		return imgui.KeyF11
-	case glfw.KeyF12:
-		return imgui.KeyF12
 	default:
-		return imgui.KeyNone
+		break
 	}
+	switch keycode {
+	case sdl.K_TAB:
+		return imgui.KeyTab
+	case sdl.K_LEFT:
+		return imgui.KeyLeftArrow
+	case sdl.K_RIGHT:
+		return imgui.KeyRightArrow
+	case sdl.K_UP:
+		return imgui.KeyUpArrow
+	case sdl.K_DOWN:
+		return imgui.KeyDownArrow
+	case sdl.K_PAGEUP:
+		return imgui.KeyPageUp
+	case sdl.K_PAGEDOWN:
+		return imgui.KeyPageDown
+	case sdl.K_HOME:
+		return imgui.KeyHome
+	case sdl.K_END:
+		return imgui.KeyEnd
+	case sdl.K_INSERT:
+		return imgui.KeyInsert
+	case sdl.K_DELETE:
+		return imgui.KeyDelete
+	case sdl.K_BACKSPACE:
+		return imgui.KeyBackspace
+	case sdl.K_SPACE:
+		return imgui.KeySpace
+	case sdl.K_RETURN:
+		return imgui.KeyEnter
+	case sdl.K_ESCAPE:
+		return imgui.KeyEscape
+	case sdl.K_COMMA:
+		return imgui.KeyComma
+
+	case sdl.K_PERIOD:
+		return imgui.KeyPeriod
+
+	case sdl.K_SEMICOLON:
+		return imgui.KeySemicolon
+
+	case sdl.K_CAPSLOCK:
+		return imgui.KeyCapsLock
+	case sdl.K_SCROLLLOCK:
+		return imgui.KeyScrollLock
+	case sdl.K_NUMLOCKCLEAR:
+		return imgui.KeyNumLock
+	case sdl.K_PRINTSCREEN:
+		return imgui.KeyPrintScreen
+	case sdl.K_PAUSE:
+		return imgui.KeyPause
+	case sdl.K_LCTRL:
+		return imgui.KeyLeftCtrl
+	case sdl.K_LSHIFT:
+		return imgui.KeyLeftShift
+	case sdl.K_LALT:
+		return imgui.KeyLeftAlt
+	case sdl.K_LGUI:
+		return imgui.KeyLeftSuper
+	case sdl.K_RCTRL:
+		return imgui.KeyRightCtrl
+	case sdl.K_RSHIFT:
+		return imgui.KeyRightShift
+	case sdl.K_RALT:
+		return imgui.KeyRightAlt
+	case sdl.K_RGUI:
+		return imgui.KeyRightSuper
+	case sdl.K_APPLICATION:
+		return imgui.KeyMenu
+	case sdl.K_0:
+		return imgui.Key0
+	case sdl.K_1:
+		return imgui.Key1
+	case sdl.K_2:
+		return imgui.Key2
+	case sdl.K_3:
+		return imgui.Key3
+	case sdl.K_4:
+		return imgui.Key4
+	case sdl.K_5:
+		return imgui.Key5
+	case sdl.K_6:
+		return imgui.Key6
+	case sdl.K_7:
+		return imgui.Key7
+	case sdl.K_8:
+		return imgui.Key8
+	case sdl.K_9:
+		return imgui.Key9
+	case sdl.K_A:
+		return imgui.KeyA
+	case sdl.K_B:
+		return imgui.KeyB
+	case sdl.K_C:
+		return imgui.KeyC
+	case sdl.K_D:
+		return imgui.KeyD
+	case sdl.K_E:
+		return imgui.KeyE
+	case sdl.K_F:
+		return imgui.KeyF
+	case sdl.K_G:
+		return imgui.KeyG
+	case sdl.K_H:
+		return imgui.KeyH
+	case sdl.K_I:
+		return imgui.KeyI
+	case sdl.K_J:
+		return imgui.KeyJ
+	case sdl.K_K:
+		return imgui.KeyK
+	case sdl.K_L:
+		return imgui.KeyL
+	case sdl.K_M:
+		return imgui.KeyM
+	case sdl.K_N:
+		return imgui.KeyN
+	case sdl.K_O:
+		return imgui.KeyO
+	case sdl.K_P:
+		return imgui.KeyP
+	case sdl.K_Q:
+		return imgui.KeyQ
+	case sdl.K_R:
+		return imgui.KeyR
+	case sdl.K_S:
+		return imgui.KeyS
+	case sdl.K_T:
+		return imgui.KeyT
+	case sdl.K_U:
+		return imgui.KeyU
+	case sdl.K_V:
+		return imgui.KeyV
+	case sdl.K_W:
+		return imgui.KeyW
+	case sdl.K_X:
+		return imgui.KeyX
+	case sdl.K_Y:
+		return imgui.KeyY
+	case sdl.K_Z:
+		return imgui.KeyZ
+	case sdl.K_F1:
+		return imgui.KeyF1
+	case sdl.K_F2:
+		return imgui.KeyF2
+	case sdl.K_F3:
+		return imgui.KeyF3
+	case sdl.K_F4:
+		return imgui.KeyF4
+	case sdl.K_F5:
+		return imgui.KeyF5
+	case sdl.K_F6:
+		return imgui.KeyF6
+	case sdl.K_F7:
+		return imgui.KeyF7
+	case sdl.K_F8:
+		return imgui.KeyF8
+	case sdl.K_F9:
+		return imgui.KeyF9
+	case sdl.K_F10:
+		return imgui.KeyF10
+	case sdl.K_F11:
+		return imgui.KeyF11
+	case sdl.K_F12:
+		return imgui.KeyF12
+	case sdl.K_F13:
+		return imgui.KeyF13
+	case sdl.K_F14:
+		return imgui.KeyF14
+	case sdl.K_F15:
+		return imgui.KeyF15
+	case sdl.K_F16:
+		return imgui.KeyF16
+	case sdl.K_F17:
+		return imgui.KeyF17
+	case sdl.K_F18:
+		return imgui.KeyF18
+	case sdl.K_F19:
+		return imgui.KeyF19
+	case sdl.K_F20:
+		return imgui.KeyF20
+	case sdl.K_F21:
+		return imgui.KeyF21
+	case sdl.K_F22:
+		return imgui.KeyF22
+	case sdl.K_F23:
+		return imgui.KeyF23
+	case sdl.K_F24:
+		return imgui.KeyF24
+	case sdl.K_AC_BACK:
+		return imgui.KeyAppBack
+	case sdl.K_AC_FORWARD:
+		return imgui.KeyAppForward
+	default:
+		break
+	}
+
+	// Fallback to scancode
+	switch scancode {
+	case sdl.SCANCODE_GRAVE:
+		return imgui.KeyGraveAccent
+	case sdl.SCANCODE_MINUS:
+		return imgui.KeyMinus
+	case sdl.SCANCODE_EQUALS:
+		return imgui.KeyEqual
+	case sdl.SCANCODE_LEFTBRACKET:
+		return imgui.KeyLeftBracket
+	case sdl.SCANCODE_RIGHTBRACKET:
+		return imgui.KeyRightBracket
+		//case sdl.SCANCODE_NONUSBACKSLASH: return imgui.KeyOem102;
+	case sdl.SCANCODE_BACKSLASH:
+		return imgui.KeyBackslash
+	case sdl.SCANCODE_SEMICOLON:
+		return imgui.KeySemicolon
+	case sdl.SCANCODE_APOSTROPHE:
+		return imgui.KeyApostrophe
+	case sdl.SCANCODE_COMMA:
+		return imgui.KeyComma
+	case sdl.SCANCODE_PERIOD:
+		return imgui.KeyPeriod
+	case sdl.SCANCODE_SLASH:
+		return imgui.KeySlash
+	default:
+		break
+	}
+	return imgui.KeyNone
 }
 
-func keyToModifier(key glfw.Key) glfw.ModifierKey {
-	switch {
-	case key == glfw.KeyLeftControl || key == glfw.KeyRightControl:
-		return glfw.ModControl
-	case key == glfw.KeyLeftShift || key == glfw.KeyRightShift:
-		return glfw.ModShift
-	case key == glfw.KeyLeftAlt || key == glfw.KeyRightAlt:
-		return glfw.ModAlt
-	case key == glfw.KeyLeftSuper || key == glfw.KeyRightSuper:
-		return glfw.ModSuper
-	}
-
-	return 0
-}
-
-func updateKeyModifiers(mods glfw.ModifierKey) {
-	ImIO.AddKeyEvent(imgui.KeyReservedForModCtrl, (mods&glfw.ModControl) != 0)
-	ImIO.AddKeyEvent(imgui.KeyReservedForModShift, (mods&glfw.ModShift) != 0)
-	ImIO.AddKeyEvent(imgui.KeyReservedForModAlt, (mods&glfw.ModAlt) != 0)
-	ImIO.AddKeyEvent(imgui.KeyReservedForModSuper, (mods&glfw.ModSuper) != 0)
+func sdlUpdateKeyModifiers(mods sdl.Keymod) {
+	ImIO.AddKeyEvent(imgui.KeyReservedForModCtrl, (mods&sdl.KMOD_CTRL) != 0)
+	ImIO.AddKeyEvent(imgui.KeyReservedForModShift, (mods&sdl.KMOD_SHIFT) != 0)
+	ImIO.AddKeyEvent(imgui.KeyReservedForModAlt, (mods&sdl.KMOD_ALT) != 0)
+	ImIO.AddKeyEvent(imgui.KeyReservedForModSuper, (mods&sdl.KMOD_GUI) != 0)
 }
 
 var lastTime float64
@@ -456,20 +483,20 @@ func Begin() {
 	sliderSledLastFrame = sliderSledThisFrame
 	sliderSledThisFrame = false
 
-	x, y := input.Win.GetCursorPos()
+	x, y := gcontext.GetCursorPosition()
 
 	w, h := int(settings.Graphics.GetWidth()), int(settings.Graphics.GetHeight()) //input.Win.GetFramebufferSize()
-	_, h1 := glfw.GetCurrentContext().GetFramebufferSize()
+	_, h1 := gcontext.GetFramebufferSize()
 
 	scaling := float32(h1) / float32(h)
 
-	ImIO.AddMousePosEvent(float32(x)/scaling, float32(y)/scaling)
-	ImIO.AddMouseButtonEvent(0, input.Win.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press)
-	ImIO.AddMouseButtonEvent(1, input.Win.GetMouseButton(glfw.MouseButtonRight) == glfw.Press)
+	ImIO.AddMousePosEvent(x/scaling, y/scaling)
+	ImIO.AddMouseButtonEvent(0, gcontext.GetLeftClick())
+	ImIO.AddMouseButtonEvent(1, gcontext.GetRightClick())
 
 	ImIO.SetDisplaySize(imgui.Vec2{X: float32(w), Y: float32(h)})
 
-	time := glfw.GetTime()
+	time := qpc.GetMilliTimeF() / 1000
 
 	delta := float32(time - lastTime)
 
@@ -528,7 +555,7 @@ func DrawImgui() {
 	blend.Enable()
 	blend.SetFunction(blend.SrcAlpha, blend.OneMinusSrcAlpha)
 
-	_, h1 := glfw.GetCurrentContext().GetFramebufferSize()
+	_, h1 := gcontext.GetFramebufferSize()
 
 	scaling := float32(h1) / float32(h)
 

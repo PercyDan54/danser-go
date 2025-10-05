@@ -2,12 +2,14 @@ package buffer
 
 import (
 	"fmt"
+	"runtime"
+
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/go-gl/gl/v3.3-core/gl"
-	"github.com/go-gl/glfw/v3.3/glfw"
+
 	"github.com/wieku/danser-go/framework/goroutines"
 	"github.com/wieku/danser-go/framework/graphics/history"
 	"github.com/wieku/danser-go/framework/profiler"
-	"runtime"
 )
 
 type PersistentBufferObject struct {
@@ -20,7 +22,7 @@ type PersistentBufferObject struct {
 }
 
 func NewPersistentBufferObject(maxFloats int) *PersistentBufferObject {
-	if !glfw.ExtensionSupported("GL_ARB_buffer_storage") {
+	if !sdl.GL_ExtensionSupported("GL_ARB_buffer_storage") {
 		panic("Your GPU does not support one or more required OpenGL extensions: [GL_ARB_buffer_storage]. Please update your graphics drivers or upgrade your GPU.")
 	}
 

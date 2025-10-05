@@ -2,7 +2,15 @@ package overlays
 
 import (
 	"fmt"
-	"github.com/go-gl/glfw/v3.3/glfw"
+	"log"
+	"math"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/Zyko0/go-sdl3/sdl"
+
 	"github.com/wieku/danser-go/app/audio"
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
@@ -10,7 +18,6 @@ import (
 	camera2 "github.com/wieku/danser-go/app/bmath/camera"
 	"github.com/wieku/danser-go/app/discord"
 	"github.com/wieku/danser-go/app/graphics"
-	"github.com/wieku/danser-go/app/input"
 	"github.com/wieku/danser-go/app/rulesets/osu"
 	"github.com/wieku/danser-go/app/rulesets/osu/performance"
 	"github.com/wieku/danser-go/app/settings"
@@ -32,12 +39,7 @@ import (
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"log"
-	"math"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"github.com/wieku/danser-go/framework/platform/gcontext"
 )
 
 const (
@@ -541,7 +543,7 @@ func (overlay *ScoreOverlay) Update(time float64) {
 		overlay.initMods()
 	}
 
-	if input.Win.GetKey(glfw.KeySpace) == glfw.Press {
+	if gcontext.GetKeyState(sdl.K_SPACE) == gcontext.Press {
 		if overlay.skip != nil && overlay.music != nil && overlay.music.GetState() == bass.MusicPlaying {
 			if overlay.audioTime < overlay.skipTo && !overlay.skipped {
 				overlay.music.SetPosition(overlay.skipTo / 1000)

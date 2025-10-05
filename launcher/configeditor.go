@@ -3,9 +3,17 @@ package launcher
 import (
 	"cmp"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/AllenDang/cimgui-go/imgui"
-	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/sqweek/dialog"
+
 	"github.com/wieku/danser-go/app/osuapi"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/env"
@@ -14,13 +22,7 @@ import (
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/platform"
-	"os"
-	"path/filepath"
-	"reflect"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
+	"github.com/wieku/danser-go/framework/platform/gcontext"
 )
 
 const padY = 30
@@ -76,12 +78,10 @@ func newSettingsEditor(config *settings.Config) *settingsEditor {
 	return editor
 }
 
-func (editor *settingsEditor) updateKey(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, _ glfw.ModifierKey) {
-	if editor.opened && editor.keyChange != "" && action == glfw.Press {
-		keyText, ok := platform.GetKeyName(key, scancode)
-
-		if ok && keyText != "" {
-			editor.keyChangeVal.SetString(keyText)
+func (editor *settingsEditor) updateKey(event gcontext.KeyEvent) {
+	if editor.opened && editor.keyChange != "" && event.Action == gcontext.Press {
+		if event.Name != "" {
+			editor.keyChangeVal.SetString(event.Name)
 			editor.keyChangeOpened = false
 			editor.keyChange = ""
 
@@ -434,7 +434,7 @@ func (editor *settingsEditor) buildMainSection(jsonPath, sPath, name string, u r
 
 			if settings.Credentails.AuthType == "AuthorizationCode" {
 				if imgui.Button("Copy callback URL##auth") {
-					glfw.GetCurrentContext().SetClipboardString("http://localhost:" + strconv.Itoa(settings.Credentails.CallbackPort))
+					gcontext.AddToClipboard("http://localhost:" + strconv.Itoa(settings.Credentails.CallbackPort))
 				}
 
 				imgui.SameLine()

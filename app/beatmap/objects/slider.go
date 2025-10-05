@@ -2,7 +2,14 @@ package objects
 
 import (
 	"cmp"
+	"math"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/go-gl/mathgl/mgl32"
+
 	"github.com/wieku/danser-go/app/audio"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/graphics/sliderrenderer"
@@ -17,11 +24,6 @@ import (
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
-	"math"
-	"slices"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -377,13 +379,13 @@ func (slider *Slider) calculateFollowPointsLazer(beatmapVersion int) {
 
 	cLength := slider.multiCurve.GetLengthLazer()
 
-	velocity := 100 * slider.Timings.SliderMult / slider.TPoint.GetBeatLength()
+	velocity := 100 * slider.Timings.SliderMult / slider.TPoint.GetBeatLengthLazer()
 
 	scoringDistance := velocity * slider.TPoint.GetBaseBeatLength()
 
 	tickDistanceMultiplier := 1.0
 	if beatmapVersion < 8 {
-		tickDistanceMultiplier = 1.0 / slider.TPoint.GetRatio2()
+		tickDistanceMultiplier = 1.0 / slider.TPoint.GetRatioLazer()
 	}
 
 	tickDistance := scoringDistance / slider.Timings.TickRate * tickDistanceMultiplier
@@ -1129,10 +1131,8 @@ func (slider *Slider) Draw(time float64, color color2.Color, batch *batch.QuadBa
 
 		batch.SetSubScale(1, 1)
 
-		if settings.Objects.Sliders.DrawEndCircles {
-			for i := len(slider.endCircles) - 1; i >= 0; i-- {
-				slider.endCircles[i].Draw(time, color, batch)
-			}
+		for i := len(slider.endCircles) - 1; i >= 0; i-- {
+			slider.endCircles[i].Draw(time, color, batch)
 		}
 	}
 

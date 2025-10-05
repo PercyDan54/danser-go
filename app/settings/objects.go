@@ -13,6 +13,7 @@ func initObjects() *objects {
 		Sliders: &sliders{
 			ForceSliderBallTexture: true,
 			DrawEndCircles:         true,
+			DrawReverseArrows:      true,
 			DrawSliderFollowCircle: true,
 			DrawScorePoints:        true,
 			SliderMerge:            false,
@@ -112,6 +113,7 @@ type objects struct {
 type sliders struct {
 	ForceSliderBallTexture bool `label:"Force slider ball texture on mandalas"`
 	DrawEndCircles         bool
+	DrawReverseArrows      bool
 	DrawSliderFollowCircle bool
 	DrawScorePoints        bool //true
 	SliderMerge            bool

@@ -8,10 +8,10 @@ require (
 	github.com/AllenDang/cimgui-go v1.0.0
 	github.com/EdlinOrg/prominentcolor v1.0.0
 	github.com/Microsoft/go-winio v0.6.1
+	github.com/Zyko0/go-sdl3 v0.0.0-20250728161448-bc9bb5e56afe
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-gl/gl v0.0.0-20210813123233-e4099ee2221f
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b
 	github.com/go-gl/mathgl v1.2.0
 	github.com/itchio/lzma v0.0.0-20190703113020-d3e24e3e3d49
 	github.com/mattn/go-sqlite3 v1.14.24
@@ -30,8 +30,10 @@ require (
 
 require (
 	github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf // indirect
+	github.com/Zyko0/purego-gen v0.0.0-20250727121216-3bcd331a1e0c // indirect
 	github.com/ananagame/rich-go v0.0.0-20210525072106-9d45f0e06959 // indirect
 	github.com/bnch/uleb128 v0.0.0-20160221084957-fac1fe18ad59 // indirect
+	github.com/ebitengine/purego v0.9.0-alpha.2.0.20250124174847-29f0104e3c2b // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -54,3 +56,5 @@ require (
 replace github.com/sqweek/dialog => github.com/wieku/dialog v1.0.0
 
 replace github.com/AllenDang/cimgui-go => github.com/Wieku/cimgui-go v1.0.0
+
+replace github.com/Zyko0/go-sdl3 => github.com/wieku/go-sdl3 v1.0.1

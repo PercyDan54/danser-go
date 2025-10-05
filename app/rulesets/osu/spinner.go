@@ -1,11 +1,12 @@
 package osu
 
 import (
+	"math"
+
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/danser-go/app/beatmap/objects"
 	"github.com/wieku/danser-go/framework/math/math32"
 	"github.com/wieku/danser-go/framework/math/mutils"
-	"math"
 )
 
 const FrameTime = 1000.0 / 60
@@ -243,19 +244,19 @@ func (spinner *Spinner) processLazer(player *difficultyPlayer, time int64) {
 
 	state := spinner.state[player]
 
+	timeDiff := float64(time - state.lastTime)
+	state.lastTime = time
+
 	if time >= int64(spinner.hitSpinner.GetStartTime()) && time <= int64(spinner.hitSpinner.GetEndTime()) {
-		timeDiff := float64(time - state.lastTime)
-		state.lastTime = time
+		var delta float32 = 0.0
 
 		thisAngle := player.cursor.RawPosition.Sub(spinnerPosition).Angle()
-
-		var delta float32 = 0.0
 
 		if state.updatedBefore {
 			delta = thisAngle - state.lastAngle32
 		}
 
-		state.updatedBefore = true
+		state.lastAngle32 = thisAngle
 
 		if delta > 180 {
 			delta -= 360
@@ -267,38 +268,23 @@ func (spinner *Spinner) processLazer(player *difficultyPlayer, time int64) {
 
 		var deltaRPM float32 = 0
 
-		if player.gameDownState || player.diff.CheckModActive(difficulty.Relax) {
+		if player.diff.CheckModActive(difficulty.SpunOut) {
+			rotationSpeed := float32(1.01 * float64(state.requirement) / (spinner.hitSpinner.GetEndTime() - spinner.hitSpinner.GetStartTime()))
+
+			delta = float32(timeDiff) * rotationSpeed * 360
+
+			spinner.lzReportDelta(state, delta)
+
+			deltaRPM = delta
+		} else if player.gameDownState || player.diff.CheckModActive(difficulty.Relax) {
 			delta *= float32(player.diff.GetSpeed())
 
-			if delta != 0 {
-				state.totalAccumulatedRotation += delta
-
-				state.currentSpinMaxRotation = max(state.currentSpinMaxRotation, mutils.Abs(state.currentSpinRotation()))
-
-				// Handle the case where the user has completed another spin.
-				// Note that this does could be an `if` rather than `while` if the above assertion held true.
-				// It is a `while` loop to handle tests which throw larger values at this method.
-				for state.currentSpinMaxRotation >= 360 {
-					direction := mutils.Signum(state.currentSpinRotation())
-
-					state.rotationCount++
-
-					// Incrementing the last completion point will cause `currentSpinRotation` to
-					// hold the remaining spin that needs to be considered.
-					state.totalAccumulatedRotationAtLastCompletion += float32(direction) * 360
-
-					// Reset the current max as we are entering a new spin.
-					// Importantly, carry over the remainder (which is now stored in `currentSpinRotation`).
-					state.currentSpinMaxRotation = mutils.Abs(state.currentSpinRotation())
-				}
-			}
-
-			state.rotationCountF += delta
+			spinner.lzReportDelta(state, delta)
 
 			deltaRPM = delta
 		}
 
-		state.lastAngle32 = thisAngle
+		state.updatedBefore = true
 
 		spinning := mutils.Abs(state.rotationCountF-state.rotationCountFPrev) > 10
 
@@ -350,6 +336,33 @@ func (spinner *Spinner) processLazer(player *difficultyPlayer, time int64) {
 
 		state.lastRotationCount = state.rotationCount
 	}
+}
+
+func (spinner *Spinner) lzReportDelta(state *spinnerstate, delta float32) {
+	if delta != 0 {
+		state.totalAccumulatedRotation += delta
+
+		state.currentSpinMaxRotation = max(state.currentSpinMaxRotation, mutils.Abs(state.currentSpinRotation()))
+
+		// Handle the case where the user has completed another spin.
+		// Note that this does could be an `if` rather than `while` if the above assertion held true.
+		// It is a `while` loop to handle tests which throw larger values at this method.
+		for state.currentSpinMaxRotation >= 360 {
+			direction := mutils.Signum(state.currentSpinRotation())
+
+			state.rotationCount++
+
+			// Incrementing the last completion point will cause `currentSpinRotation` to
+			// hold the remaining spin that needs to be considered.
+			state.totalAccumulatedRotationAtLastCompletion += float32(direction) * 360
+
+			// Reset the current max as we are entering a new spin.
+			// Importantly, carry over the remainder (which is now stored in `currentSpinRotation`).
+			state.currentSpinMaxRotation = mutils.Abs(state.currentSpinRotation())
+		}
+	}
+
+	state.rotationCountF += delta
 }
 
 func (spinner *Spinner) UpdatePostFor(player *difficultyPlayer, time int64, _ bool) bool {
